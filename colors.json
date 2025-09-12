@@ -1,98 +1,50 @@
 {
-  "Red": {
-    "hex": "#FF0000",
-    "wavelength_nm": "620–750",
-    "frequency_thz": "400–480",
-    "chakra": "Root (Muladhara)",
-    "element": "Earth",
-    "quick": "Passion, survival, grounding.",
-    "extended": "Red anchors you to physical reality. It awakens primal life force, courage, and vitality. Spiritually, it is the color of the Root Chakra, connecting body and Earth. Its frequency boosts motivation but in excess may trigger aggression or restlessness."
+  "red": {
+    "short": "Energy, passion, and primal life force.",
+    "long": "Red stimulates vitality and courage, awakening the root chakra. Scientifically, it is linked to longer light waves that activate the body’s alert systems."
   },
-  "Orange": {
-    "hex": "#FFA500",
-    "wavelength_nm": "590–620",
-    "frequency_thz": "480–510",
-    "chakra": "Sacral (Svadhisthana)",
-    "element": "Water",
-    "quick": "Joy, sensuality, flow.",
-    "extended": "Orange harmonizes emotional flow and awakens creative passion. Like water, it adapts and nourishes. It resonates with the womb, fertility, and emotional expression."
+  "orange": {
+    "short": "Creativity, joy, and social connection.",
+    "long": "Orange harmonizes emotions and enhances creativity. It resonates with the sacral chakra and inspires enthusiasm."
   },
-  "Yellow": {
-    "hex": "#FFFF00",
-    "wavelength_nm": "570–590",
-    "frequency_thz": "510–530",
-    "chakra": "Solar Plexus (Manipura)",
-    "element": "Fire",
-    "quick": "Willpower, intellect, identity.",
-    "extended": "Yellow illuminates personal power and purpose. It is the fire of the sun within, linked to self-esteem and decision-making. Too much yellow may overstimulate the nervous system, while balance sharpens clarity and joy."
+  "yellow": {
+    "short": "Clarity, intellect, and confidence.",
+    "long": "Yellow stimulates the mind and helps decision making. It resonates with the solar plexus chakra, boosting willpower and personal strength."
   },
-  "Green": {
-    "hex": "#00FF00",
-    "wavelength_nm": "495–570",
-    "frequency_thz": "530–600",
-    "chakra": "Heart (Anahata)",
-    "element": "Air",
-    "quick": "Harmony, compassion, growth.",
-    "extended": "Green is the middle of the visible spectrum, balancing warm and cool tones. It restores peace, connects with nature, and opens the heart to compassion. Associated with plants and renewal, it harmonizes body, mind, and emotions."
+  "green": {
+    "short": "Balance, healing, and compassion.",
+    "long": "Green represents harmony and nature. It resonates with the heart chakra, promoting growth, healing, and emotional stability."
   },
-  "Blue": {
-    "hex": "#1E90FF",
-    "wavelength_nm": "450–495",
-    "frequency_thz": "620–670",
-    "chakra": "Throat (Vishuddha)",
-    "element": "Water/Ether",
-    "quick": "Communication, truth, serenity.",
-    "extended": "Blue soothes the mind and helps expression of inner truth. It resonates with water and the sky, giving clarity and flow. In healing, blue is used to reduce inflammation and induce calmness."
+  "turquoise": {
+    "short": "Communication and emotional release.",
+    "long": "Turquoise connects heart and throat chakras. It clears emotional blockages and enhances truth in communication."
   },
-  "Indigo": {
-    "hex": "#4B0082",
-    "wavelength_nm": "425–450",
-    "frequency_thz": "670–720",
-    "chakra": "Third Eye (Ajna)",
-    "element": "Light",
-    "quick": "Wisdom, intuition, perception.",
-    "extended": "Indigo bridges conscious and unconscious awareness. Its deep vibration opens the Third Eye, enhancing vision beyond the physical. It is connected to night, mystery, and the inward journey."
+  "blue": {
+    "short": "Calm, truth, and higher communication.",
+    "long": "Blue resonates with the throat chakra. It enhances inner peace, clarity, and expression of truth."
   },
-  "Violet": {
-    "hex": "#8A2BE2",
-    "wavelength_nm": "380–425",
-    "frequency_thz": "720–790",
-    "chakra": "Crown (Sahasrara)",
-    "element": "Ether/Spirit",
-    "quick": "Spirituality, unity, transcendence.",
-    "extended": "Violet unites red’s passion with blue’s calm, symbolizing transformation and spiritual awakening. Its frequency is the highest in the visible spectrum, guiding beyond form toward cosmic consciousness."
+  "indigo": {
+    "short": "Wisdom, intuition, and higher perception.",
+    "long": "Indigo stimulates the third eye chakra, awakening intuition and deeper insight into reality."
   },
-  "Turquoise": {
-    "hex": "#40E0D0",
-    "between": "Blue & Green",
-    "quick": "Communication + Healing.",
-    "extended": "Turquoise opens the heart and throat together. It enhances creativity, emotional balance, and clarity in self-expression."
+  "violet": {
+    "short": "Spirituality, transformation, and higher consciousness.",
+    "long": "Violet aligns with the crown chakra, guiding connection to universal wisdom and transcendence."
   },
-  "Magenta": {
-    "hex": "#FF00FF",
-    "between": "Red & Violet",
-    "quick": "Transformation, Love beyond Ego.",
-    "extended": "Magenta bridges physical and spiritual realms. It is used in aura healing to harmonize body and spirit, and symbolizes universal love."
+  "pink": {
+    "short": "Love, compassion, and emotional healing.",
+    "long": "Pink represents gentle love energy. It soothes emotional pain and nurtures self-acceptance."
   },
-  "Gold": {
-    "hex": "#FFD700",
-    "between": "Yellow & Orange",
-    "quick": "Divine Wisdom, Solar Energy.",
-    "extended": "Gold radiates higher knowledge, sacred kingship, and solar energy. It strengthens confidence and symbolizes divine light."
+  "white": {
+    "short": "Purity, unity, and divine connection.",
+    "long": "White contains all colors of the spectrum. It symbolizes spiritual awakening and wholeness."
   },
-  "White": {
-    "hex": "#FFFFFF",
-    "quick": "Purity, Unity.",
-    "extended": "White contains all wavelengths combined. It symbolizes cleansing, spiritual protection, and connection to higher planes."
+  "black": {
+    "short": "Mystery, protection, and grounding.",
+    "long": "Black absorbs all light and symbolizes the void. It represents protection, rest, and the hidden mysteries of creation."
   },
-  "Black": {
-    "hex": "#000000",
-    "quick": "Mystery, Void, Potential.",
-    "extended": "Black is the absence of light. It symbolizes protection, grounding, and the void of creation — the place where all potential begins."
-  },
-  "Silver": {
-    "hex": "#C0C0C0",
-    "quick": "Intuition, Feminine Power.",
-    "extended": "Silver reflects the moon’s power. It enhances dreamwork, psychic sensitivity, and emotional fluidity."
+  "grey": {
+    "short": "Neutrality and balance.",
+    "long": "Grey represents detachment and calm neutrality. It can signify both indecision and inner peace."
   }
 }
