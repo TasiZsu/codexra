@@ -1,84 +1,162 @@
 import streamlit as st
 from PIL import Image
 import numpy as np
-from sklearn.cluster import KMeans
 import json
+import colorsys
+import io
 
-# --- Load color meaning database ---
-with open("colors.json", "r", encoding="utf-8") as f:
-    color_data = json.load(f)
+# ----- load color meanings -----
+def load_color_data(path="colors.json"):
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        st.warning("Could not load colors.json — defaulting to minimal set.")
+        return {}
 
-# Function: find closest color in database
-def closest_color_name(rgb):
-    min_dist = float("inf")
-    closest = None
-    for c in color_data:
-        cr, cg, cb = color_data[c]["rgb"]
-        dist = np.linalg.norm(np.array(rgb) - np.array([cr, cg, cb]))
-        if dist < min_dist:
-            min_dist = dist
-            closest = c
-    return closest
+color_data = load_color_data()
 
-# Function: get dominant colors
-def get_dominant_colors(image, n_colors=3):
-    img = image.resize((150, 150))  # resize for speed
-    img_data = np.array(img).reshape(-1, 3)
+# ----- helpers -----
+def rgb_to_hex(rgb):
+    return "#{:02X}{:02X}{:02X}".format(int(rgb[0]), int(rgb[1]), int(rgb[2]))
 
-    kmeans = KMeans(n_clusters=n_colors, random_state=42, n_init=10)
-    labels = kmeans.fit_predict(img_data)
+def rgb_to_hsv_deg(r,g,b):
+    # r,g,b 0-255 -> returns h (0..360), s (0..1), v (0..1)
+    h,s,v = colorsys.rgb_to_hsv(r/255.0, g/255.0, b/255.0)
+    return h*360, s, v
 
-    counts = np.bincount(labels)
-    centers = kmeans.cluster_centers_.astype(int)
+def classify_by_hue(r,g,b):
+    h, s, v = rgb_to_hsv_deg(r,g,b)
+    # black / white / silver
+    if v <= 0.06:
+        return "black"
+    if s <= 0.12 and v >= 0.92:
+        return "white"
+    if s <= 0.18:
+        return "silver"
 
-    # sort by frequency
-    sorted_idx = np.argsort(-counts)
-    percentages = counts[sorted_idx] / sum(counts) * 100
-    colors = centers[sorted_idx]
+    # main hue ranges (degrees)
+    if h < 15 or h >= 345:
+        return "red"
+    if 15 <= h < 45:
+        return "orange"
+    if 45 <= h < 65:
+        return "yellow"
+    if 65 <= h < 150:
+        return "green"
+    if 150 <= h < 180:
+        return "turquoise"
+    if 180 <= h < 240:
+        return "blue"
+    if 240 <= h < 275:
+        return "indigo"
+    if 275 <= h < 320:
+        return "violet"
+    if 320 <= h < 345:
+        return "pink"
+    # fallback
+    return "white"
 
-    return colors, percentages
+def get_top_colors_pillow(image: Image.Image, n_colors=3):
+    """
+    Use Pillow adaptive palette to get top colors.
+    Returns list of tuples: ( (r,g,b), percentage )
+    """
+    # ensure RGB
+    img = image.convert("RGB")
+    # resize to speed up
+    w,h = img.size
+    max_dim = 300
+    if max(w,h) > max_dim:
+        scale = max_dim / max(w,h)
+        img = img.resize((int(w*scale), int(h*scale)), Image.LANCZOS)
 
-# --- Streamlit UI ---
-st.set_page_config(page_title="CodexRa - Decode the Light Within", layout="wide", page_icon="🌈")
+    pal = img.convert("P", palette=Image.ADAPTIVE, colors=n_colors)
+    palette = pal.getpalette()  # list [r,g,b, r,g,b,...]
+    color_counts = pal.getcolors()  # list of (count, palette_index)
 
-st.title("🌈 CodexRa: Decode the Light Within")
-st.write("Upload an image to analyze its **3 dominant colors**, their **frequency, chakra meaning, and effects**.")
+    if not color_counts:
+        # fallback sampling
+        arr = np.array(img).reshape(-1,3)
+        vals, counts = np.unique(arr, axis=0, return_counts=True)
+        top_idx = np.argsort(-counts)[:n_colors]
+        total = counts.sum()
+        return [ (tuple(vals[i]), counts[i]/total) for i in top_idx ]
 
-uploaded_file = st.file_uploader("Upload an image", type=["jpg", "png", "jpeg"])
+    total = sum(c[0] for c in color_counts)
+    # sort by count desc
+    color_counts.sort(reverse=True, key=lambda x: x[0])
+    results = []
+    for count, idx in color_counts[:n_colors]:
+        r = palette[idx*3]
+        g = palette[idx*3 + 1]
+        b = palette[idx*3 + 2]
+        pct = count / total
+        results.append(((r,g,b), pct))
+    return results
 
-if uploaded_file:
-    image = Image.open(uploaded_file).convert("RGB")
-    st.image(image, caption="Uploaded Image", use_column_width=True)
+# ----- Streamlit UI -----
+st.set_page_config(page_title="CodexRa - Decode the Light Within", layout="centered", page_icon="🌈")
+st.title("🌈 CodexRa — Decode the Light Within")
+st.write("Upload an image and CodexRa will analyze the 3 dominant colors, map them to chakra & frequency meanings, and give a short + extended interpretation.")
 
-    colors, percentages = get_dominant_colors(image)
+uploaded_file = st.file_uploader("Upload an image (jpg/png)", type=["jpg","jpeg","png"])
 
-    st.header("✨ Color Analysis")
+if uploaded_file is None:
+    st.info("Upload an image to start. You can also drag&drop.")
+    st.markdown("**Tip:** use photos or paintings. Try the sample images after upload if you like.")
+else:
+    # open image
+    try:
+        image = Image.open(io.BytesIO(uploaded_file.read())).convert("RGB")
+    except Exception:
+        st.error("Failed to open image. Try a different file.")
+        st.stop()
+
+    st.image(image, caption="Uploaded image", use_column_width=True)
+
+    # get top colors
+    top = get_top_colors_pillow(image, n_colors=3)
+    if not top:
+        st.error("Could not analyze image colors.")
+        st.stop()
+
+    st.header("🎨 Dominant Colors")
     summaries = []
+    # display each as its own block
+    for i, (rgb, pct) in enumerate(top, start=1):
+        hexc = rgb_to_hex(rgb)
+        # classify by hue to one of the color keys
+        key = classify_by_hue(*rgb)
+        meaning = color_data.get(key, {})
+        short = meaning.get("short", "No short meaning available.")
+        long = meaning.get("long", "No extended meaning available.")
+        chakra = meaning.get("chakra", "")
 
-    for i, (col, pct) in enumerate(zip(colors, percentages)):
-        hex_color = "#{:02x}{:02x}{:02x}".format(col[0], col[1], col[2])
-        name = closest_color_name(col)
-        chakra = color_data[name]["chakra"]
-        short = color_data[name]["short"]
-        long = color_data[name]["long"]
-
-        with st.container():
-            st.markdown(f"### 🎨 Color {i+1}: {name} ({pct:.1f}%)")
-            st.markdown(f"**Hex:** {hex_color} | **RGB:** {col}")
-            st.color_picker("Preview", hex_color, key=f"picker_{i}", label_visibility="collapsed")
-
-            st.markdown(f"**Chakra:** {chakra}")
-            st.markdown(f"**Meaning:** {short}")
-
+        # Block
+        st.markdown(f"### {i}. {key.capitalize()} — `{hexc}` — {pct*100:.1f}%")
+        cols = st.columns([1,3])
+        with cols[0]:
+            st.write("")
+            sw = st.empty()
+            sw.markdown(f"<div style='width:100%;height:80px;border-radius:8px;background:{hexc};border:1px solid rgba(255,255,255,0.08)'></div>", unsafe_allow_html=True)
+        with cols[1]:
+            if chakra: st.markdown(f"**Chakra:** {chakra}")
+            st.markdown(f"**Quick:** {short}")
             with st.expander("🔮 More about this color"):
                 st.write(long)
 
-            summaries.append(name)
+        summaries.append(short)
 
-    # --- Summary Section ---
-    st.header("🌌 Combined Meaning")
-    joined = ", ".join(summaries)
-    st.write(f"Your image radiates mainly **{joined}** energies. Together, they create a unique frequency mix that influences both **mind and body**.")
-
-else:
-    st.info("⬆️ Please upload an image to start analysis.")
+    # Combined summary
+    st.header("🌀 Combined Summary")
+    if summaries:
+        combined = " • ".join(summaries)
+        st.markdown(f"**Quick combined:** {combined}")
+        st.write("")
+        # small friendly sentence
+        keys = [classify_by_hue(*rgb) for rgb,_ in top]
+        human_readable = ", ".join(k.capitalize() for k in keys)
+        st.markdown(f"The image mainly resonates with **{human_readable}** energies. Each color brings its influence — together they create a unique emotional and energetic fingerprint.")
+    else:
+        st.info("No summary available.")
