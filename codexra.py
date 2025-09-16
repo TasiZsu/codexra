@@ -1,162 +1,130 @@
 import streamlit as st
-from PIL import Image
 import numpy as np
+from sklearn.cluster import KMeans
+from collections import Counter
+from PIL import Image
+import webcolors
 import json
-import colorsys
-import io
 
-# ----- load color meanings -----
-def load_color_data(path="colors.json"):
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception as e:
-        st.warning("Could not load colors.json — defaulting to minimal set.")
-        return {}
+st.set_page_config(page_title="Codex-Ra", layout="wide")
 
-color_data = load_color_data()
+# --- Színadatbázis (bővíthető JSON formában is) ---
+color_db = {
+    "red": {
+        "short": "Vitality, strength, and passion.",
+        "long": "Red is linked to the Root Chakra (Muladhara). It represents life force, courage, grounding, and primal energy. Psychologically, it stimulates attention and determination."
+    },
+    "orange": {
+        "short": "Creativity, sexuality, and joy.",
+        "long": "Orange resonates with the Sacral Chakra (Svadhisthana). It symbolizes warmth, emotional flow, and creative energy. It is associated with pleasure, sociability, and optimism."
+    },
+    "yellow": {
+        "short": "Energy, intellect, and clarity.",
+        "long": "Yellow is connected to the Solar Plexus Chakra (Manipura). It represents willpower, focus, and confidence. Scientifically, it activates mental clarity and optimism."
+    },
+    "green": {
+        "short": "Harmony, balance, and healing.",
+        "long": "Green corresponds to the Heart Chakra (Anahata). It symbolizes compassion, growth, and renewal. It relaxes the nervous system and creates emotional stability."
+    },
+    "blue": {
+        "short": "Calmness, communication, and truth.",
+        "long": "Blue resonates with the Throat Chakra (Vishuddha). It encourages self-expression, serenity, and clear thought. Physiologically, blue tones lower stress and aid concentration."
+    },
+    "indigo": {
+        "short": "Intuition, depth, and perception.",
+        "long": "Indigo aligns with the Third Eye Chakra (Ajna). It reflects wisdom, imagination, and spiritual insight. It connects to higher awareness and inner vision."
+    },
+    "violet": {
+        "short": "Spirituality, transformation, and inspiration.",
+        "long": "Violet is linked to the Crown Chakra (Sahasrara). It symbolizes transcendence, unity, and divine wisdom. It has historically represented mystical knowledge and higher states."
+    },
+    # Köztes színek
+    "brown": {
+        "short": "Stability, grounding, and earth connection.",
+        "long": "Brown is associated with security, reliability, and natural cycles. Psychologically it connects to simplicity, humility, and comfort."
+    },
+    "turquoise": {
+        "short": "Healing, balance, and communication.",
+        "long": "Turquoise blends green and blue energies. It enhances clarity, emotional healing, and spiritual protection. In many cultures, it symbolizes truth and sacred connection."
+    },
+    "magenta": {
+        "short": "Transformation, harmony, and spiritual balance.",
+        "long": "Magenta combines red’s vitality with violet’s spirituality. It symbolizes alchemy, renewal, and higher emotional awareness."
+    },
+    "white": {
+        "short": "Purity, unity, and openness.",
+        "long": "White holds all colors of light. It represents spiritual wholeness, clarity, and transcendence. It resets the mind and clears energetic fields."
+    },
+    "black": {
+        "short": "Mystery, protection, and depth.",
+        "long": "Black absorbs all light. It symbolizes the unknown, the void, and transformation. It provides grounding and authority."
+    },
+    "grey": {
+        "short": "Neutrality, balance, and calm.",
+        "long": "Grey reflects detachment and neutrality. It creates a stabilizing field, but too much may feel dull or lifeless."
+    }
+}
 
-# ----- helpers -----
-def rgb_to_hex(rgb):
-    return "#{:02X}{:02X}{:02X}".format(int(rgb[0]), int(rgb[1]), int(rgb[2]))
+# --- Szín hozzárendelés ---
+def match_color_name(rgb):
+    r, g, b = rgb
+    if max(rgb) < 40: return "black"
+    if min(rgb) > 220: return "white"
+    if abs(r-g) < 15 and abs(g-b) < 15: return "grey"
 
-def rgb_to_hsv_deg(r,g,b):
-    # r,g,b 0-255 -> returns h (0..360), s (0..1), v (0..1)
-    h,s,v = colorsys.rgb_to_hsv(r/255.0, g/255.0, b/255.0)
-    return h*360, s, v
+    if r > 150 and g < 100 and b < 100: return "red"
+    if r > 200 and 100 < g < 180 and b < 100: return "orange"
+    if r > 200 and g > 200 and b < 100: return "yellow"
+    if g > 120 and b < 120 and r < 120: return "green"
+    if b > 150 and g > 100 and r < 100: return "turquoise"
+    if b > 180 and r < 100 and g < 150: return "blue"
+    if r > 100 and b > 150 and g < 100: return "violet"
+    if r > 150 and b > 150 and g < 150: return "magenta"
+    if r > 100 and g < 80 and b < 50: return "brown"
+    if r > 75 and g > 75 and b > 75: return "grey"
 
-def classify_by_hue(r,g,b):
-    h, s, v = rgb_to_hsv_deg(r,g,b)
-    # black / white / silver
-    if v <= 0.06:
-        return "black"
-    if s <= 0.12 and v >= 0.92:
-        return "white"
-    if s <= 0.18:
-        return "silver"
+    return "indigo"
 
-    # main hue ranges (degrees)
-    if h < 15 or h >= 345:
-        return "red"
-    if 15 <= h < 45:
-        return "orange"
-    if 45 <= h < 65:
-        return "yellow"
-    if 65 <= h < 150:
-        return "green"
-    if 150 <= h < 180:
-        return "turquoise"
-    if 180 <= h < 240:
-        return "blue"
-    if 240 <= h < 275:
-        return "indigo"
-    if 275 <= h < 320:
-        return "violet"
-    if 320 <= h < 345:
-        return "pink"
-    # fallback
-    return "white"
+# --- Színdominancia elemzés ---
+def extract_colors(image, num_colors=5):
+    img = image.resize((150, 150))
+    img_data = np.array(img).reshape(-1, 3)
 
-def get_top_colors_pillow(image: Image.Image, n_colors=3):
-    """
-    Use Pillow adaptive palette to get top colors.
-    Returns list of tuples: ( (r,g,b), percentage )
-    """
-    # ensure RGB
-    img = image.convert("RGB")
-    # resize to speed up
-    w,h = img.size
-    max_dim = 300
-    if max(w,h) > max_dim:
-        scale = max_dim / max(w,h)
-        img = img.resize((int(w*scale), int(h*scale)), Image.LANCZOS)
+    # KMeans a domináns színekre
+    kmeans = KMeans(n_clusters=num_colors, random_state=42, n_init=10)
+    labels = kmeans.fit_predict(img_data)
+    counts = Counter(labels)
 
-    pal = img.convert("P", palette=Image.ADAPTIVE, colors=n_colors)
-    palette = pal.getpalette()  # list [r,g,b, r,g,b,...]
-    color_counts = pal.getcolors()  # list of (count, palette_index)
+    total = sum(counts.values())
+    colors = []
+    for idx, count in counts.most_common(num_colors):
+        rgb = kmeans.cluster_centers_[idx].astype(int)
+        hex_val = webcolors.rgb_to_hex(tuple(rgb))
+        name = match_color_name(rgb)
+        percent = round((count / total) * 100, 2)
+        colors.append((hex_val, rgb, name, percent))
+    return colors
 
-    if not color_counts:
-        # fallback sampling
-        arr = np.array(img).reshape(-1,3)
-        vals, counts = np.unique(arr, axis=0, return_counts=True)
-        top_idx = np.argsort(-counts)[:n_colors]
-        total = counts.sum()
-        return [ (tuple(vals[i]), counts[i]/total) for i in top_idx ]
+# --- Streamlit UI ---
+st.title("🌈 Codex-Ra: Decode the Light Within")
+st.write("Upload an image to analyze its **dominant & accent colors** with symbolic and scientific insights.")
 
-    total = sum(c[0] for c in color_counts)
-    # sort by count desc
-    color_counts.sort(reverse=True, key=lambda x: x[0])
-    results = []
-    for count, idx in color_counts[:n_colors]:
-        r = palette[idx*3]
-        g = palette[idx*3 + 1]
-        b = palette[idx*3 + 2]
-        pct = count / total
-        results.append(((r,g,b), pct))
-    return results
+uploaded_file = st.file_uploader("Upload Image", type=["jpg", "jpeg", "png"])
+if uploaded_file:
+    image = Image.open(uploaded_file).convert("RGB")
+    st.image(image, caption="Uploaded Image", use_column_width=True)
 
-# ----- Streamlit UI -----
-st.set_page_config(page_title="CodexRa - Decode the Light Within", layout="centered", page_icon="🌈")
-st.title("🌈 CodexRa — Decode the Light Within")
-st.write("Upload an image and CodexRa will analyze the 3 dominant colors, map them to chakra & frequency meanings, and give a short + extended interpretation.")
+    colors = extract_colors(image, num_colors=5)
 
-uploaded_file = st.file_uploader("Upload an image (jpg/png)", type=["jpg","jpeg","png"])
+    st.subheader("🎨 Dominant & Accent Colors")
+    for idx, (hex_val, rgb, name, percent) in enumerate(colors):
+        col1, col2 = st.columns([1, 3])
+        with col1:
+            st.markdown(f"<div style='background-color:{hex_val}; width:50px; height:50px; border-radius:8px'></div>", unsafe_allow_html=True)
+        with col2:
+            st.markdown(f"**{name.capitalize()}** ({percent}%) – {hex_val}")
 
-if uploaded_file is None:
-    st.info("Upload an image to start. You can also drag&drop.")
-    st.markdown("**Tip:** use photos or paintings. Try the sample images after upload if you like.")
-else:
-    # open image
-    try:
-        image = Image.open(io.BytesIO(uploaded_file.read())).convert("RGB")
-    except Exception:
-        st.error("Failed to open image. Try a different file.")
-        st.stop()
-
-    st.image(image, caption="Uploaded image", use_column_width=True)
-
-    # get top colors
-    top = get_top_colors_pillow(image, n_colors=3)
-    if not top:
-        st.error("Could not analyze image colors.")
-        st.stop()
-
-    st.header("🎨 Dominant Colors")
-    summaries = []
-    # display each as its own block
-    for i, (rgb, pct) in enumerate(top, start=1):
-        hexc = rgb_to_hex(rgb)
-        # classify by hue to one of the color keys
-        key = classify_by_hue(*rgb)
-        meaning = color_data.get(key, {})
-        short = meaning.get("short", "No short meaning available.")
-        long = meaning.get("long", "No extended meaning available.")
-        chakra = meaning.get("chakra", "")
-
-        # Block
-        st.markdown(f"### {i}. {key.capitalize()} — `{hexc}` — {pct*100:.1f}%")
-        cols = st.columns([1,3])
-        with cols[0]:
-            st.write("")
-            sw = st.empty()
-            sw.markdown(f"<div style='width:100%;height:80px;border-radius:8px;background:{hexc};border:1px solid rgba(255,255,255,0.08)'></div>", unsafe_allow_html=True)
-        with cols[1]:
-            if chakra: st.markdown(f"**Chakra:** {chakra}")
-            st.markdown(f"**Quick:** {short}")
-            with st.expander("🔮 More about this color"):
-                st.write(long)
-
-        summaries.append(short)
-
-    # Combined summary
-    st.header("🌀 Combined Summary")
-    if summaries:
-        combined = " • ".join(summaries)
-        st.markdown(f"**Quick combined:** {combined}")
-        st.write("")
-        # small friendly sentence
-        keys = [classify_by_hue(*rgb) for rgb,_ in top]
-        human_readable = ", ".join(k.capitalize() for k in keys)
-        st.markdown(f"The image mainly resonates with **{human_readable}** energies. Each color brings its influence — together they create a unique emotional and energetic fingerprint.")
-    else:
-        st.info("No summary available.")
+            if name in color_db:
+                st.write(color_db[name]["short"])
+                with st.expander("More about this color..."):
+                    st.write(color_db[name]["long"])
