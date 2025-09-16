@@ -265,3 +265,4 @@ def export_csv(all_colors):
     return buf.getvalue().encode("utf-8")
 
 st.download_button("Export results (CSV)", data=export_csv(None), file_name="codexra_colors.csv", mime="text/csv")
+
