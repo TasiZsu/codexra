@@ -108,3 +108,86 @@ def get_palette_pillow(image: Image.Image, colors=24):
         g = palette[idx*3 + 1]
         b = palette[idx*3 + 2]
         pct = count / total
+        results.append(((r,g,b), pct))
+    return results
+
+# ---------- COLOR SCORING ----------
+def score_color(rgb, pct):
+    """Hybrid score: area + saturation + brightness."""
+    h, s, v = rgb_to_hsv_deg(*rgb)
+    if s < 0.15 and v > 0.15:  # filter desaturated greys
+        return pct * 0.2
+    return (pct**0.7) * (0.5 + 0.5*s) * (0.4 + 0.6*v)
+
+def choose_dominant_and_accents(palette, n_dom=3, n_accents=2):
+    scored = [(rgb, pct, score_color(rgb, pct)) for rgb, pct in palette]
+    dominants = sorted(scored, key=lambda x: x[2], reverse=True)[:n_dom]
+    rest = [x for x in scored if x not in dominants]
+    accents = sorted(rest, key=lambda x: (rgb_to_hsv_deg(*x[0])[1], rgb_to_hsv_deg(*x[0])[2]), reverse=True)[:n_accents]
+    return dominants, accents
+# -----------------------------------
+
+def safe_get_meaning(key):
+    return color_db.get(key.lower(), {})
+
+def make_summary_text(shorts):
+    return " • ".join(shorts)
+
+# ----------------- UI -----------------
+st.title("🌈 CodexRa — Decode the Light Within")
+st.write("Upload an image and CodexRa will extract 3 dominant colors and 2 accents, then classify them into hues with quick + extended interpretations.")
+
+uploaded_file = st.file_uploader("Upload image (jpg/png)", type=["jpg","jpeg","png"])
+if not uploaded_file:
+    st.info("Upload an image to start analysis.")
+    st.stop()
+
+try:
+    image = Image.open(uploaded_file).convert("RGB")
+except Exception:
+    st.error("Could not open image. Try another file.")
+    st.stop()
+
+st.image(image, caption="Analyzed image", use_container_width=True)
+
+# extract palette
+palette = get_palette_pillow(image, colors=24)
+
+# choose dominant + accents
+dominants, accents = choose_dominant_and_accents(palette)
+
+# ----------------- SHOW DOMINANTS -----------------
+st.header("🎨 Dominant colors")
+summary_shorts = []
+for i, (rgb, pct, score) in enumerate(dominants, start=1):
+    hexc = rgb_to_hex(rgb)
+    key = classify_by_hue(rgb)
+    meaning = safe_get_meaning(key)
+    short = meaning.get("short", "No short meaning.")
+    long = meaning.get("long", "No extended meaning available.")
+    chakra = meaning.get("chakra", "")
+
+    st.markdown(f"### {i}. {key.capitalize()} — `{hexc}` ({pct*100:.1f}%)")
+    st.markdown(f"<div class='color-box' style='background:{hexc}'></div>", unsafe_allow_html=True)
+    if chakra:
+        st.markdown(f"**Chakra:** {chakra}")
+    st.markdown(f"**Quick:** {short}")
+    with st.expander("🔮 More about this color"):
+        st.write(long)
+
+    summary_shorts.append(short)
+
+# ----------------- SHOW ACCENTS -----------------
+if accents:
+    st.header("✨ Accent colors")
+    for (rgb, pct, score) in accents:
+        hexc = rgb_to_hex(rgb)
+        key = classify_by_hue(rgb)
+        meaning = safe_get_meaning(key)
+        short = meaning.get("short", "")
+        st.markdown(f"- {key.capitalize()} `{hexc}` ({pct*100:.1f}%): {short}")
+
+# ----------------- SUMMARY -----------------
+if summary_shorts:
+    st.header("🌀 Combined summary")
+    st.markdown("**Quick combined:** " + make_summary_text(summary_shorts))
