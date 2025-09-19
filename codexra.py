@@ -52,7 +52,7 @@ def rgb_to_hsv_deg(r, g, b):
     return h * 360.0, s, v
 
 def classify_by_hue(rgb):
-    """Very simple classifier to connect to color_db keys"""
+    """Simple classifier for mapping to color_db keys"""
     h, s, v = rgb_to_hsv_deg(*rgb)
     if v <= 0.06:
         return "black"
@@ -74,13 +74,13 @@ def classify_by_hue(rgb):
         return "yellow"
     if 65 <= h < 150:
         return "green"
-    if 180 <= h < 240:
+    if 185 <= h < 250:
         return "blue"
-    if 240 <= h < 275:
+    if 250 <= h < 275:
         return "indigo"
-    if 320 <= h < 345:
+    if 320 <= h < 340:
         return "pink"
-    return "unknown"
+    return "neutral"
 
 def get_palette_pillow(image: Image.Image, colors=24):
     """Return list of ((r,g,b), pct) using Pillow adaptive palette."""
@@ -111,31 +111,22 @@ def get_palette_pillow(image: Image.Image, colors=24):
         results.append(((r,g,b), pct))
     return results
 
-# ---------- COLOR SCORING ----------
+# ---------- COLOR SCORING & BUCKETS ----------
 def color_distance(rgb1, rgb2):
-    """Egyszerű euklideszi távolság RGB-ben"""
     return np.linalg.norm(np.array(rgb1) - np.array(rgb2))
 
 def score_color(rgb, pct, palette):
-    """Hybrid score: area + saturation + brightness + uniqueness"""
     h, s, v = rgb_to_hsv_deg(*rgb)
-
-    # Cutoff – ha túl szürke, túl sötét vagy túl világos → levágás
     if s < 0.25 or v < 0.2 or v > 0.95:
         return pct * 0.05
-
-    # Uniqueness: átlagos távolság a többi színtől
     if len(palette) > 1:
         distances = [color_distance(rgb, other) for (other, _) in palette if not np.array_equal(rgb, other)]
-        uniqueness = np.mean(distances) / 255.0  # normalizált
+        uniqueness = np.mean(distances) / 255.0
     else:
         uniqueness = 1.0
-
-    # Hybrid score formula
     return (pct**0.6) * (0.4 + 0.6*s) * (0.5 + 0.5*v) * (0.8 + 0.2*uniqueness)
 
 def bucket_hue(h):
-    """Hue érték alapján bucket név visszaadása."""
     if h < 20 or h >= 340:
         return "red"
     if 20 <= h < 45:
@@ -157,14 +148,13 @@ def bucket_hue(h):
     return "neutral"
 
 def choose_dominant_and_accents(palette, n_dom=3, n_accents=2):
-    # HSV + score kiszámítás
     scored = []
     for rgb, pct in palette:
         h, s, v = rgb_to_hsv_deg(*rgb)
         sc = score_color(rgb, pct, palette)
         scored.append((rgb, pct, sc, h, s, v, bucket_hue(h)))
 
-    # Bucketekbe rendezés
+    # Bucketbe rendezés
     buckets = {}
     for item in scored:
         bucket = item[6]
@@ -172,22 +162,20 @@ def choose_dominant_and_accents(palette, n_dom=3, n_accents=2):
             buckets[bucket] = []
         buckets[bucket].append(item)
 
-    # Minden bucketből a legjobb score-ú szín
+    # Minden bucketből a legjobb score
     best_per_bucket = []
     for bucket, items in buckets.items():
-        best = max(items, key=lambda x: x[2])  # score alapján
+        best = max(items, key=lambda x: x[2])
         best_per_bucket.append(best)
 
-    # Top N domináns → külön bucketekből
+    # Dominánsok: top score külön bucketekből
     dominants = sorted(best_per_bucket, key=lambda x: x[2], reverse=True)[:n_dom]
 
-    # Accent → a maradék bucketekből a legélénkebb színek
+    # Accent: a maradék bucketekből a legélénkebb színek
     rest = [x for x in best_per_bucket if x not in dominants]
     accents = sorted(rest, key=lambda x: (x[4], x[5]), reverse=True)[:n_accents]
 
     return dominants, accents
-
-
 # -----------------------------------
 
 def safe_get_meaning(key):
@@ -198,7 +186,7 @@ def make_summary_text(shorts):
 
 # ----------------- UI -----------------
 st.title("🌈 CodexRa — Decode the Light Within")
-st.write("Upload an image and CodexRa will extract 3 dominant colors and 2 accents, then classify them into hues with quick + extended interpretations.")
+st.write("Upload an image and CodexRa will extract diverse dominant colors and accents, classify them, and show quick + extended interpretations.")
 
 uploaded_file = st.file_uploader("Upload image (jpg/png)", type=["jpg","jpeg","png"])
 if not uploaded_file:
@@ -216,13 +204,13 @@ st.image(image, caption="Analyzed image", use_container_width=True)
 # extract palette
 palette = get_palette_pillow(image, colors=24)
 
-# choose dominant + accents
+# choose dominants & accents
 dominants, accents = choose_dominant_and_accents(palette)
 
 # ----------------- SHOW DOMINANTS -----------------
 st.header("🎨 Dominant colors")
 summary_shorts = []
-for i, (rgb, pct, score) in enumerate(dominants, start=1):
+for i, (rgb, pct, score, h, s, v, bucket) in enumerate(dominants, start=1):
     hexc = rgb_to_hex(rgb)
     key = classify_by_hue(rgb)
     meaning = safe_get_meaning(key)
@@ -230,7 +218,7 @@ for i, (rgb, pct, score) in enumerate(dominants, start=1):
     long = meaning.get("long", "No extended meaning available.")
     chakra = meaning.get("chakra", "")
 
-    st.markdown(f"### {i}. {key.capitalize()} — `{hexc}` ({pct*100:.1f}%)")
+    st.markdown(f"### {i}. {bucket.capitalize()} — {key.capitalize()} — `{hexc}` ({pct*100:.1f}%)")
     st.markdown(f"<div class='color-box' style='background:{hexc}'></div>", unsafe_allow_html=True)
     if chakra:
         st.markdown(f"**Chakra:** {chakra}")
@@ -243,16 +231,14 @@ for i, (rgb, pct, score) in enumerate(dominants, start=1):
 # ----------------- SHOW ACCENTS -----------------
 if accents:
     st.header("✨ Accent colors")
-    for (rgb, pct, score) in accents:
+    for (rgb, pct, score, h, s, v, bucket) in accents:
         hexc = rgb_to_hex(rgb)
         key = classify_by_hue(rgb)
         meaning = safe_get_meaning(key)
         short = meaning.get("short", "")
-        st.markdown(f"- {key.capitalize()} `{hexc}` ({pct*100:.1f}%): {short}")
+        st.markdown(f"- {bucket.capitalize()} — {key.capitalize()} `{hexc}` ({pct*100:.1f}%): {short}")
 
 # ----------------- SUMMARY -----------------
 if summary_shorts:
     st.header("🌀 Combined summary")
     st.markdown("**Quick combined:** " + make_summary_text(summary_shorts))
-
-
