@@ -5,12 +5,31 @@ import numpy as np
 import colorsys
 import json
 import io
-from collections import OrderedDict
 
 # ----------------- CONFIG -----------------
 st.set_page_config(page_title="CodexRa - Decode the Light Within", layout="wide", page_icon="🌈")
 
-# Path to your colors.json in the repo
+# Custom CSS for smaller, centered layout
+st.markdown(
+    """
+    <style>
+    .main {
+        max-width: 700px;
+        margin: auto;
+        padding-top: 2rem;
+    }
+    .color-box {
+        width: 60px;
+        height: 60px;
+        border-radius: 8px;
+        border: 1px solid rgba(255,255,255,0.2);
+        margin-bottom: 6px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 COLORS_JSON = "colors.json"
 
 # ----------------- HELPERS -----------------
@@ -28,50 +47,11 @@ def rgb_to_hex(rgb):
     return "#{:02X}{:02X}{:02X}".format(int(rgb[0]), int(rgb[1]), int(rgb[2]))
 
 def rgb_to_hsv_deg(r, g, b):
-    # returns h (0..360), s (0..1), v (0..1)
     h, s, v = colorsys.rgb_to_hsv(r/255.0, g/255.0, b/255.0)
     return h * 360.0, s, v
 
-def classify_by_hue(rgb):
-    """Return a color key matching our DB (lowercase)."""
-    r, g, b = rgb
-    h, s, v = rgb_to_hsv_deg(r, g, b)
-
-    if v <= 0.06:
-        return "black"
-    if s <= 0.12 and v >= 0.92:
-        return "white"
-    if s <= 0.18:
-        return "grey"
-
-    if (h >= 10 and h < 45) and v < 0.65:
-        return "brown"
-    if h >= 150 and h < 185 and s > 0.18:
-        return "turquoise"
-    if (h >= 320 and h < 345) or (h >= 275 and h < 320 and r>120 and b>120):
-        if h >= 320 and s > 0.25:
-            return "magenta"
-        if 275 <= h < 320:
-            return "violet"
-    if h < 15 or h >= 345:
-        return "red"
-    if 15 <= h < 45:
-        return "orange"
-    if 45 <= h < 65:
-        return "yellow"
-    if 65 <= h < 150:
-        return "green"
-    if 180 <= h < 240:
-        return "blue"
-    if 240 <= h < 275:
-        return "indigo"
-    if 275 <= h < 320:
-        return "violet"
-    if 320 <= h < 345:
-        return "pink"
-    return "white"
-
-def get_palette_pillow(image: Image.Image, colors=8):
+def get_palette_pillow(image: Image.Image, colors=24):
+    """Return list of ((r,g,b), pct) using Pillow adaptive palette."""
     img = image.convert("RGB")
     w, h = img.size
     max_dim = 400
@@ -86,11 +66,7 @@ def get_palette_pillow(image: Image.Image, colors=8):
         arr = np.array(img).reshape(-1,3)
         vals, counts = np.unique(arr, axis=0, return_counts=True)
         total = counts.sum()
-        items = []
-        idxs = np.argsort(-counts)[:colors]
-        for i in idxs:
-            items.append((tuple(vals[i].tolist()), counts[i]/total))
-        return items
+        return [(tuple(vals[i].tolist()), counts[i]/total) for i in np.argsort(-counts)[:colors]]
 
     total = sum(c[0] for c in color_counts)
     color_counts.sort(reverse=True, key=lambda x: x[0])
@@ -103,165 +79,80 @@ def get_palette_pillow(image: Image.Image, colors=8):
         results.append(((r,g,b), pct))
     return results
 
-# ---------- NEW HYBRID MODE ----------
-def score_color(rgb, pct, all_colors):
-    """Compute perceptual score for a color."""
+# ---------- COLOR SCORING ----------
+def score_color(rgb, pct):
+    """Hybrid score: area + saturation + brightness."""
     h, s, v = rgb_to_hsv_deg(*rgb)
-    # frequency distance approx (use average RGB as proxy)
-    distances = [abs(sum(rgb)/3 - sum(c[0])/3) for c in all_colors if c[0] != rgb]
-    freq_bonus = (sum(distances)/len(distances)) if distances else 1
-    # weight pixel ratio, saturation, brightness, uniqueness
-    score = (pct**0.7) * (0.6 + 0.4*s) * (0.5 + 0.5*v) * (1 + freq_bonus/100)
-    return score
+    # Ignore nearly grey / desaturated colors
+    if s < 0.15 and v > 0.15:
+        return pct * 0.2
+    return (pct**0.7) * (0.5 + 0.5*s) * (0.4 + 0.6*v)
 
 def choose_dominant_and_accents(palette, n_dom=3, n_accents=2):
-    scored_colors = [(rgb, pct, score_color(rgb, pct, palette)) for rgb, pct in palette]
-    # top 3 dominants by score
-    top3 = sorted(scored_colors, key=lambda x: x[2], reverse=True)[:n_dom]
-    # accents from rest: most saturated + bright
-    rest = scored_colors[n_dom:]
+    scored = [(rgb, pct, score_color(rgb, pct)) for rgb, pct in palette]
+    # Dominants: top 3 by score
+    dominants = sorted(scored, key=lambda x: x[2], reverse=True)[:n_dom]
+    # Accents: most saturated + bright from rest
+    rest = [x for x in scored if x not in dominants]
     accents = sorted(rest, key=lambda x: (rgb_to_hsv_deg(*x[0])[1], rgb_to_hsv_deg(*x[0])[2]), reverse=True)[:n_accents]
-    return top3, accents
-# -------------------------------------
+    return dominants, accents
+# -----------------------------------
 
 def safe_get_meaning(key):
-    k = key.lower()
-    return color_db.get(k, {})
+    return color_db.get(key.lower(), {})
 
 def make_summary_text(shorts):
     return " • ".join(shorts)
 
 # ----------------- UI -----------------
 st.title("🌈 CodexRa — Decode the Light Within")
-st.write("Upload an image and CodexRa will extract the 3 dominant colors and 2 accent colors, classify them into main/intermediate hues, and show quick + extended interpretations (chakra, symbolic, scientific).")
-
-col1, col2 = st.columns([3,1])
-with col2:
-    st.markdown("**Settings**")
-    colors_count = st.slider("Palette colors (quality vs speed)", 5, 12, 8)
-    sample_button = st.button("Use sample gradient")
+st.write("Upload an image and CodexRa will extract 3 dominant colors and 2 accents, then classify them into hues with quick + extended interpretations.")
 
 uploaded_file = st.file_uploader("Upload image (jpg/png)", type=["jpg","jpeg","png"])
-st.markdown(
-    """
-    <style>
-    .main {
-        max-width: 700px;
-        margin: auto;
-        padding-top: 2rem;
-    }
-    .color-box {
-        width: 60px;
-        height: 60px;
-        border-radius: 8px;
-        border: 1px solid rgba(255,255,255,0.2);
-        margin-right: 8px;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
 
-if sample_button:
-    w, h = 800, 480
-    c = Image.new("RGB", (w,h))
-    draw = c.load()
-    for x in range(w):
-        for y in range(h):
-            r = int(255 * (x / w))
-            g = int(200 * (y / h))
-            b = int(255 * (1 - x / w))
-            draw[x,y] = (r,g,b)
-    uploaded_file = io.BytesIO()
-    c.save(uploaded_file, format="PNG")
-    uploaded_file.seek(0)
-    uploaded_image = Image.open(uploaded_file).convert("RGB")
-    image = uploaded_image
-else:
-    if uploaded_file:
-        try:
-            image = Image.open(uploaded_file).convert("RGB")
-        except Exception as e:
-            st.error("Could not open image. Try another file.")
-            st.stop()
-    else:
-        st.info("Upload an image to start analysis (or use the sample).")
-        st.stop()
+if not uploaded_file:
+    st.info("Upload an image to start analysis.")
+    st.stop()
+
+try:
+    image = Image.open(uploaded_file).convert("RGB")
+except Exception:
+    st.error("Could not open image. Try another file.")
+    st.stop()
 
 st.image(image, caption="Analyzed image", use_container_width=True)
 
-# extract palette
-palette = get_palette_pillow(image, colors=colors_count)
+# extract palette (more colors for better clustering)
+palette = get_palette_pillow(image, colors=24)
 
-# pick dominants & accents (hybrid)
-dominants, accents = choose_dominant_and_accents(palette, n_dom=3, n_accents=2)
+# pick dominants & accents
+dominants, accents = choose_dominant_and_accents(palette)
 
-# Display dominants
-st.header("🎨 Dominant colors (3) — separate blocks")
+# Show dominants
+st.header("🎨 Dominant colors")
 summary_shorts = []
-
-for i, (rgb, pct, score) in enumerate(dominants, start=1):
+cols = st.columns(len(dominants))
+for i, (rgb, pct, score) in enumerate(dominants):
     hexc = rgb_to_hex(rgb)
-    key = classify_by_hue(rgb)
+    key = hexc
     meaning = safe_get_meaning(key)
-    short = meaning.get("short", "No short meaning.")
-    long = meaning.get("long", "No extended meaning available.")
-    chakra = meaning.get("chakra", "")
-
-    st.markdown(f"### {i}. {key.capitalize()}  — `{hexc}`  ({pct*100:.1f}%)")
-    cols = st.columns([1,3])
-    with cols[0]:
-        st.markdown(f"<div style='width:100%;height:80px;border-radius:8px;background:{hexc};border:1px solid rgba(255,255,255,0.08)'></div>", unsafe_allow_html=True)
-    with cols[1]:
-        if chakra:
-            st.markdown(f"**Chakra:** {chakra}")
-        st.markdown(f"**Quick:** {short}")
-        with st.expander("🔮 More about this color"):
-            st.write(long)
-
+    short = meaning.get("short", "")
+    with cols[i]:
+        st.markdown(f"<div class='color-box' style='background:{hexc}'></div>", unsafe_allow_html=True)
+        st.markdown(f"`{hexc}` {pct*100:.1f}%")
     summary_shorts.append(short)
 
-# Display accent colors
+# Show accents
 if accents:
-    st.header("✨ Accent colors (2) — high saturation / contrast")
-    acc_cols = []
-    for (rgb, pct, score) in accents:
+    st.header("✨ Accent colors")
+    cols = st.columns(len(accents))
+    for i, (rgb, pct, score) in enumerate(accents):
         hexc = rgb_to_hex(rgb)
-        key = classify_by_hue(rgb)
-        meaning = safe_get_meaning(key)
-        short = meaning.get("short", "")
-        acc_cols.append(f"{key.capitalize()} `{hexc}` ({pct*100:.1f}%): {short}")
-    for a in acc_cols:
-        st.markdown("- " + a)
+        with cols[i]:
+            st.markdown(f"<div class='color-box' style='background:{hexc}'></div>", unsafe_allow_html=True)
+            st.markdown(f"`{hexc}` {pct*100:.1f}%")
 
 # Combined summary
-st.header("🌀 Combined summary")
 if summary_shorts:
+    st.header("🌀 Combined summary")
     st.markdown("**Quick combined:** " + make_summary_text(summary_shorts))
-    keys = [classify_by_hue(rgb) for (rgb,_,_) in dominants]
-    human_readable = ", ".join(k.capitalize() for k in keys)
-    st.write(f"The image mainly resonates with **{human_readable}** energies. Each color contributes its effect; together they form the energetic fingerprint of the image.")
-else:
-    st.info("No colors found to summarize.")
-
-# CSV export
-def export_csv(all_colors):
-    import csv, tempfile
-    csv_rows = [["rank","key","hex","r","g","b","percent","short"]]
-    idx = 1
-    for (rgb,pct,score) in dominants:
-        key = classify_by_hue(rgb)
-        csv_rows.append([idx, key, rgb_to_hex(rgb), rgb[0], rgb[1], rgb[2], f"{pct*100:.2f}", safe_get_meaning(key).get("short","")])
-        idx += 1
-    for (rgb,pct,score) in accents:
-        key = classify_by_hue(rgb)
-        csv_rows.append([idx, key, rgb_to_hex(rgb), rgb[0], rgb[1], rgb[2], f"{pct*100:.2f}", safe_get_meaning(key).get("short","")])
-        idx += 1
-    buf = io.StringIO()
-    import csv
-    writer = csv.writer(buf)
-    writer.writerows(csv_rows)
-    return buf.getvalue().encode("utf-8")
-
-st.download_button("Export results (CSV)", data=export_csv(None), file_name="codexra_colors.csv", mime="text/csv")
-
