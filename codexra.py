@@ -142,6 +142,25 @@ with col2:
     sample_button = st.button("Use sample gradient")
 
 uploaded_file = st.file_uploader("Upload image (jpg/png)", type=["jpg","jpeg","png"])
+st.markdown(
+    """
+    <style>
+    .main {
+        max-width: 700px;
+        margin: auto;
+        padding-top: 2rem;
+    }
+    .color-box {
+        width: 60px;
+        height: 60px;
+        border-radius: 8px;
+        border: 1px solid rgba(255,255,255,0.2);
+        margin-right: 8px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 if sample_button:
     w, h = 800, 480
@@ -245,3 +264,4 @@ def export_csv(all_colors):
     return buf.getvalue().encode("utf-8")
 
 st.download_button("Export results (CSV)", data=export_csv(None), file_name="codexra_colors.csv", mime="text/csv")
+
