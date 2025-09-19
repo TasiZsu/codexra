@@ -7,14 +7,15 @@ import json
 import io
 
 # ----------------- CONFIG -----------------
-st.set_page_config(page_title="CodexRa - Decode the Light Within", layout="wide", page_icon="🌈")
+st.set_page_config(page_title="CodexRa - Decode the Light Within",
+                   layout="centered", page_icon="🌈")
 
-# Custom CSS for smaller, centered layout
+# Custom CSS for centered, max-width layout
 st.markdown(
     """
     <style>
     .main {
-        max-width: 700px;
+        max-width: 900px;
         margin: auto;
         padding-top: 2rem;
     }
@@ -50,6 +51,37 @@ def rgb_to_hsv_deg(r, g, b):
     h, s, v = colorsys.rgb_to_hsv(r/255.0, g/255.0, b/255.0)
     return h * 360.0, s, v
 
+def classify_by_hue(rgb):
+    """Very simple classifier to connect to color_db keys"""
+    h, s, v = rgb_to_hsv_deg(*rgb)
+    if v <= 0.06:
+        return "black"
+    if s <= 0.12 and v >= 0.92:
+        return "white"
+    if s <= 0.18:
+        return "grey"
+    if (h >= 10 and h < 45) and v < 0.65:
+        return "brown"
+    if h >= 150 and h < 185 and s > 0.18:
+        return "turquoise"
+    if (h >= 320 and h < 345) or (h >= 275 and h < 320):
+        return "violet"
+    if h < 15 or h >= 345:
+        return "red"
+    if 15 <= h < 45:
+        return "orange"
+    if 45 <= h < 65:
+        return "yellow"
+    if 65 <= h < 150:
+        return "green"
+    if 180 <= h < 240:
+        return "blue"
+    if 240 <= h < 275:
+        return "indigo"
+    if 320 <= h < 345:
+        return "pink"
+    return "unknown"
+
 def get_palette_pillow(image: Image.Image, colors=24):
     """Return list of ((r,g,b), pct) using Pillow adaptive palette."""
     img = image.convert("RGB")
@@ -76,83 +108,3 @@ def get_palette_pillow(image: Image.Image, colors=24):
         g = palette[idx*3 + 1]
         b = palette[idx*3 + 2]
         pct = count / total
-        results.append(((r,g,b), pct))
-    return results
-
-# ---------- COLOR SCORING ----------
-def score_color(rgb, pct):
-    """Hybrid score: area + saturation + brightness."""
-    h, s, v = rgb_to_hsv_deg(*rgb)
-    # Ignore nearly grey / desaturated colors
-    if s < 0.15 and v > 0.15:
-        return pct * 0.2
-    return (pct**0.7) * (0.5 + 0.5*s) * (0.4 + 0.6*v)
-
-def choose_dominant_and_accents(palette, n_dom=3, n_accents=2):
-    scored = [(rgb, pct, score_color(rgb, pct)) for rgb, pct in palette]
-    # Dominants: top 3 by score
-    dominants = sorted(scored, key=lambda x: x[2], reverse=True)[:n_dom]
-    # Accents: most saturated + bright from rest
-    rest = [x for x in scored if x not in dominants]
-    accents = sorted(rest, key=lambda x: (rgb_to_hsv_deg(*x[0])[1], rgb_to_hsv_deg(*x[0])[2]), reverse=True)[:n_accents]
-    return dominants, accents
-# -----------------------------------
-
-def safe_get_meaning(key):
-    return color_db.get(key.lower(), {})
-
-def make_summary_text(shorts):
-    return " • ".join(shorts)
-
-# ----------------- UI -----------------
-st.title("🌈 CodexRa — Decode the Light Within")
-st.write("Upload an image and CodexRa will extract 3 dominant colors and 2 accents, then classify them into hues with quick + extended interpretations.")
-
-uploaded_file = st.file_uploader("Upload image (jpg/png)", type=["jpg","jpeg","png"])
-
-if not uploaded_file:
-    st.info("Upload an image to start analysis.")
-    st.stop()
-
-try:
-    image = Image.open(uploaded_file).convert("RGB")
-except Exception:
-    st.error("Could not open image. Try another file.")
-    st.stop()
-
-st.image(image, caption="Analyzed image", use_container_width=True)
-
-# extract palette (more colors for better clustering)
-palette = get_palette_pillow(image, colors=24)
-
-# pick dominants & accents
-dominants, accents = choose_dominant_and_accents(palette)
-
-# Show dominants
-st.header("🎨 Dominant colors")
-summary_shorts = []
-cols = st.columns(len(dominants))
-for i, (rgb, pct, score) in enumerate(dominants):
-    hexc = rgb_to_hex(rgb)
-    key = hexc
-    meaning = safe_get_meaning(key)
-    short = meaning.get("short", "")
-    with cols[i]:
-        st.markdown(f"<div class='color-box' style='background:{hexc}'></div>", unsafe_allow_html=True)
-        st.markdown(f"`{hexc}` {pct*100:.1f}%")
-    summary_shorts.append(short)
-
-# Show accents
-if accents:
-    st.header("✨ Accent colors")
-    cols = st.columns(len(accents))
-    for i, (rgb, pct, score) in enumerate(accents):
-        hexc = rgb_to_hex(rgb)
-        with cols[i]:
-            st.markdown(f"<div class='color-box' style='background:{hexc}'></div>", unsafe_allow_html=True)
-            st.markdown(f"`{hexc}` {pct*100:.1f}%")
-
-# Combined summary
-if summary_shorts:
-    st.header("🌀 Combined summary")
-    st.markdown("**Quick combined:** " + make_summary_text(summary_shorts))
