@@ -134,22 +134,59 @@ def score_color(rgb, pct, palette):
     # Hybrid score formula
     return (pct**0.6) * (0.4 + 0.6*s) * (0.5 + 0.5*v) * (0.8 + 0.2*uniqueness)
 
+def bucket_hue(h):
+    """Hue érték alapján bucket név visszaadása."""
+    if h < 20 or h >= 340:
+        return "red"
+    if 20 <= h < 45:
+        return "orange"
+    if 45 <= h < 65:
+        return "yellow"
+    if 65 <= h < 150:
+        return "green"
+    if 150 <= h < 185:
+        return "cyan"
+    if 185 <= h < 250:
+        return "blue"
+    if 250 <= h < 275:
+        return "indigo"
+    if 275 <= h < 320:
+        return "violet"
+    if 320 <= h < 340:
+        return "pink"
+    return "neutral"
+
 def choose_dominant_and_accents(palette, n_dom=3, n_accents=2):
-    # Minden színhez score számítás
-    scored = [(rgb, pct, score_color(rgb, pct, palette)) for rgb, pct in palette]
+    # HSV + score kiszámítás
+    scored = []
+    for rgb, pct in palette:
+        h, s, v = rgb_to_hsv_deg(*rgb)
+        sc = score_color(rgb, pct, palette)
+        scored.append((rgb, pct, sc, h, s, v, bucket_hue(h)))
 
-    # Domináns: top score
-    dominants = sorted(scored, key=lambda x: x[2], reverse=True)[:n_dom]
+    # Bucketekbe rendezés
+    buckets = {}
+    for item in scored:
+        bucket = item[6]
+        if bucket not in buckets:
+            buckets[bucket] = []
+        buckets[bucket].append(item)
 
-    # Accent: telítettség + brightness alapján, de nem duplikálva dominánsokkal
-    rest = [x for x in scored if x not in dominants]
-    accents = sorted(
-        rest,
-        key=lambda x: (rgb_to_hsv_deg(*x[0])[1], rgb_to_hsv_deg(*x[0])[2]),
-        reverse=True
-    )[:n_accents]
+    # Minden bucketből a legjobb score-ú szín
+    best_per_bucket = []
+    for bucket, items in buckets.items():
+        best = max(items, key=lambda x: x[2])  # score alapján
+        best_per_bucket.append(best)
+
+    # Top N domináns → külön bucketekből
+    dominants = sorted(best_per_bucket, key=lambda x: x[2], reverse=True)[:n_dom]
+
+    # Accent → a maradék bucketekből a legélénkebb színek
+    rest = [x for x in best_per_bucket if x not in dominants]
+    accents = sorted(rest, key=lambda x: (x[4], x[5]), reverse=True)[:n_accents]
 
     return dominants, accents
+
 
 # -----------------------------------
 
@@ -217,4 +254,5 @@ if accents:
 if summary_shorts:
     st.header("🌀 Combined summary")
     st.markdown("**Quick combined:** " + make_summary_text(summary_shorts))
+
 
