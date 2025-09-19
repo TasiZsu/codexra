@@ -112,19 +112,45 @@ def get_palette_pillow(image: Image.Image, colors=24):
     return results
 
 # ---------- COLOR SCORING ----------
-def score_color(rgb, pct):
-    """Hybrid score: area + saturation + brightness."""
+def color_distance(rgb1, rgb2):
+    """Egyszerű euklideszi távolság RGB-ben"""
+    return np.linalg.norm(np.array(rgb1) - np.array(rgb2))
+
+def score_color(rgb, pct, palette):
+    """Hybrid score: area + saturation + brightness + uniqueness"""
     h, s, v = rgb_to_hsv_deg(*rgb)
-    if s < 0.15 and v > 0.15:  # filter desaturated greys
-        return pct * 0.2
-    return (pct**0.7) * (0.5 + 0.5*s) * (0.4 + 0.6*v)
+
+    # Cutoff – ha túl szürke, túl sötét vagy túl világos → levágás
+    if s < 0.25 or v < 0.2 or v > 0.95:
+        return pct * 0.05
+
+    # Uniqueness: átlagos távolság a többi színtől
+    if len(palette) > 1:
+        distances = [color_distance(rgb, other) for (other, _) in palette if not np.array_equal(rgb, other)]
+        uniqueness = np.mean(distances) / 255.0  # normalizált
+    else:
+        uniqueness = 1.0
+
+    # Hybrid score formula
+    return (pct**0.6) * (0.4 + 0.6*s) * (0.5 + 0.5*v) * (0.8 + 0.2*uniqueness)
 
 def choose_dominant_and_accents(palette, n_dom=3, n_accents=2):
-    scored = [(rgb, pct, score_color(rgb, pct)) for rgb, pct in palette]
+    # Minden színhez score számítás
+    scored = [(rgb, pct, score_color(rgb, pct, palette)) for rgb, pct in palette]
+
+    # Domináns: top score
     dominants = sorted(scored, key=lambda x: x[2], reverse=True)[:n_dom]
+
+    # Accent: telítettség + brightness alapján, de nem duplikálva dominánsokkal
     rest = [x for x in scored if x not in dominants]
-    accents = sorted(rest, key=lambda x: (rgb_to_hsv_deg(*x[0])[1], rgb_to_hsv_deg(*x[0])[2]), reverse=True)[:n_accents]
+    accents = sorted(
+        rest,
+        key=lambda x: (rgb_to_hsv_deg(*x[0])[1], rgb_to_hsv_deg(*x[0])[2]),
+        reverse=True
+    )[:n_accents]
+
     return dominants, accents
+
 # -----------------------------------
 
 def safe_get_meaning(key):
@@ -191,3 +217,4 @@ if accents:
 if summary_shorts:
     st.header("🌀 Combined summary")
     st.markdown("**Quick combined:** " + make_summary_text(summary_shorts))
+
