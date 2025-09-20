@@ -238,7 +238,27 @@ if accents:
         short = meaning.get("short", "")
         st.markdown(f"- {bucket.capitalize()} — {key.capitalize()} `{hexc}` ({pct*100:.1f}%): {short}")
 
+if accents:
+    st.header("✨ Accent colors")
+    for (rgb, pct, score, h, s, v, bucket) in accents:
+        hexc = rgb_to_hex(rgb)
+        key = classify_by_hue(rgb)
+        meaning = safe_get_meaning(key)
+        short = meaning.get("short", "")
+        long = meaning.get("long", "No extended meaning available.")
+        chakra = meaning.get("chakra", "")
+
+        st.markdown(f"#### {bucket.capitalize()} — {key.capitalize()} — `{hexc}` ({pct*100:.1f}%)")
+        st.markdown(f"<div class='color-box' style='background:{hexc}'></div>", unsafe_allow_html=True)
+        if chakra:
+            st.markdown(f"**Chakra:** {chakra}")
+        st.markdown(f"**Quick:** {short}")
+        with st.expander("🔮 More about this color"):
+            st.write(long)
+
+
 # ----------------- SUMMARY -----------------
 if summary_shorts:
     st.header("🌀 Combined summary")
     st.markdown("**Quick combined:** " + make_summary_text(summary_shorts))
+
