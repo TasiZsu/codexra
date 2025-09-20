@@ -52,7 +52,6 @@ def rgb_to_hsv_deg(r, g, b):
     return h * 360.0, s, v
 
 def classify_by_hue(rgb):
-    """Simple classifier for mapping to color_db keys"""
     h, s, v = rgb_to_hsv_deg(*rgb)
     if v <= 0.06:
         return "black"
@@ -83,7 +82,6 @@ def classify_by_hue(rgb):
     return "neutral"
 
 def get_palette_pillow(image: Image.Image, colors=24):
-    """Return list of ((r,g,b), pct) using Pillow adaptive palette."""
     img = image.convert("RGB")
     w, h = img.size
     max_dim = 400
@@ -154,7 +152,6 @@ def choose_dominant_and_accents(palette, n_dom=3, n_accents=2):
         sc = score_color(rgb, pct, palette)
         scored.append((rgb, pct, sc, h, s, v, bucket_hue(h)))
 
-    # Bucketbe rendezés
     buckets = {}
     for item in scored:
         bucket = item[6]
@@ -162,16 +159,12 @@ def choose_dominant_and_accents(palette, n_dom=3, n_accents=2):
             buckets[bucket] = []
         buckets[bucket].append(item)
 
-    # Minden bucketből a legjobb score
     best_per_bucket = []
     for bucket, items in buckets.items():
         best = max(items, key=lambda x: x[2])
         best_per_bucket.append(best)
 
-    # Dominánsok: top score külön bucketekből
     dominants = sorted(best_per_bucket, key=lambda x: x[2], reverse=True)[:n_dom]
-
-    # Accent: a maradék bucketekből a legélénkebb színek
     rest = [x for x in best_per_bucket if x not in dominants]
     accents = sorted(rest, key=lambda x: (x[4], x[5]), reverse=True)[:n_accents]
 
@@ -184,9 +177,38 @@ def safe_get_meaning(key):
 def make_summary_text(shorts):
     return " • ".join(shorts)
 
+def render_color_block(title, rgb, pct, bucket, key):
+    hexc = rgb_to_hex(rgb)
+    meaning = safe_get_meaning(key)
+
+    short = meaning.get("short", "No short meaning.")
+    long = meaning.get("long", "No extended meaning available.")
+    chakra = meaning.get("chakra", "")
+    frequency = meaning.get("frequency", "")
+    mythology = meaning.get("mythology", "")
+    alchemy = meaning.get("alchemy", "")
+
+    st.markdown(f"### {title} — {bucket.capitalize()} / {key.capitalize()} — `{hexc}` ({pct*100:.1f}%)")
+    st.markdown(f"<div class='color-box' style='background:{hexc}'></div>", unsafe_allow_html=True)
+
+    if chakra:
+        st.markdown(f"**Chakra:** {chakra}")
+    if frequency:
+        st.markdown(f"**Frequency:** {frequency}")
+    if mythology:
+        st.markdown(f"**Mythology:** {mythology}")
+    if alchemy:
+        st.markdown(f"**Alchemy:** {alchemy}")
+
+    st.markdown(f"**Quick:** {short}")
+    with st.expander("🔮 More about this color"):
+        st.write(long)
+
+    return short
+
 # ----------------- UI -----------------
 st.title("🌈 CodexRa — Decode the Light Within")
-st.write("Upload an image and CodexRa will extract diverse dominant colors and accents, classify them, and show quick + extended interpretations.")
+st.write("Upload an image and CodexRa will extract diverse dominant and accent colors, then show chakra, symbolic, frequency, mythology, alchemy info (if available).")
 
 uploaded_file = st.file_uploader("Upload image (jpg/png)", type=["jpg","jpeg","png"])
 if not uploaded_file:
@@ -211,54 +233,18 @@ dominants, accents = choose_dominant_and_accents(palette)
 st.header("🎨 Dominant colors")
 summary_shorts = []
 for i, (rgb, pct, score, h, s, v, bucket) in enumerate(dominants, start=1):
-    hexc = rgb_to_hex(rgb)
     key = classify_by_hue(rgb)
-    meaning = safe_get_meaning(key)
-    short = meaning.get("short", "No short meaning.")
-    long = meaning.get("long", "No extended meaning available.")
-    chakra = meaning.get("chakra", "")
-
-    st.markdown(f"### {i}. {bucket.capitalize()} — {key.capitalize()} — `{hexc}` ({pct*100:.1f}%)")
-    st.markdown(f"<div class='color-box' style='background:{hexc}'></div>", unsafe_allow_html=True)
-    if chakra:
-        st.markdown(f"**Chakra:** {chakra}")
-    st.markdown(f"**Quick:** {short}")
-    with st.expander("🔮 More about this color"):
-        st.write(long)
-
+    short = render_color_block(f"{i}. Dominant", rgb, pct, bucket, key)
     summary_shorts.append(short)
 
 # ----------------- SHOW ACCENTS -----------------
 if accents:
     st.header("✨ Accent colors")
-    for (rgb, pct, score, h, s, v, bucket) in accents:
-        hexc = rgb_to_hex(rgb)
+    for j, (rgb, pct, score, h, s, v, bucket) in enumerate(accents, start=1):
         key = classify_by_hue(rgb)
-        meaning = safe_get_meaning(key)
-        short = meaning.get("short", "")
-        st.markdown(f"- {bucket.capitalize()} — {key.capitalize()} `{hexc}` ({pct*100:.1f}%): {short}")
-
-if accents:
-    st.header("✨ Accent colors")
-    for (rgb, pct, score, h, s, v, bucket) in accents:
-        hexc = rgb_to_hex(rgb)
-        key = classify_by_hue(rgb)
-        meaning = safe_get_meaning(key)
-        short = meaning.get("short", "")
-        long = meaning.get("long", "No extended meaning available.")
-        chakra = meaning.get("chakra", "")
-
-        st.markdown(f"#### {bucket.capitalize()} — {key.capitalize()} — `{hexc}` ({pct*100:.1f}%)")
-        st.markdown(f"<div class='color-box' style='background:{hexc}'></div>", unsafe_allow_html=True)
-        if chakra:
-            st.markdown(f"**Chakra:** {chakra}")
-        st.markdown(f"**Quick:** {short}")
-        with st.expander("🔮 More about this color"):
-            st.write(long)
-
+        render_color_block(f"{j}. Accent", rgb, pct, bucket, key)
 
 # ----------------- SUMMARY -----------------
 if summary_shorts:
     st.header("🌀 Combined summary")
     st.markdown("**Quick combined:** " + make_summary_text(summary_shorts))
-
