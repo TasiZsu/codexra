@@ -1,53 +1,4 @@
 {
-  "red": {
-    "short": "Energy, passion, and primal life force.",
-    "long": "Red stimulates vitality and courage, awakening the root chakra. Scientifically, it is linked to longer light waves that activate the body’s alert systems."
-  },
-  "orange": {
-    "short": "Creativity, joy, and social connection.",
-    "long": "Orange harmonizes emotions and enhances creativity. It resonates with the sacral chakra and inspires enthusiasm."
-  },
-  "yellow": {
-    "short": "Clarity, intellect, and confidence.",
-    "long": "Yellow stimulates the mind and helps decision making. It resonates with the solar plexus chakra, boosting willpower and personal strength."
-  },
-  "green": {
-    "short": "Balance, healing, and compassion.",
-    "long": "Green represents harmony and nature. It resonates with the heart chakra, promoting growth, healing, and emotional stability."
-  },
-  "turquoise": {
-    "short": "Communication and emotional release.",
-    "long": "Turquoise connects heart and throat chakras. It clears emotional blockages and enhances truth in communication."
-  },
-  "blue": {
-    "short": "Calm, truth, and higher communication.",
-    "long": "Blue resonates with the throat chakra. It enhances inner peace, clarity, and expression of truth."
-  },
-  "indigo": {
-    "short": "Wisdom, intuition, and higher perception.",
-    "long": "Indigo stimulates the third eye chakra, awakening intuition and deeper insight into reality."
-  },
-  "violet": {
-    "short": "Spirituality, transformation, and higher consciousness.",
-    "long": "Violet aligns with the crown chakra, guiding connection to universal wisdom and transcendence."
-  },
-  "pink": {
-    "short": "Love, compassion, and emotional healing.",
-    "long": "Pink represents gentle love energy. It soothes emotional pain and nurtures self-acceptance."
-  },
-  "white": {
-    "short": "Purity, unity, and divine connection.",
-    "long": "White contains all colors of the spectrum. It symbolizes spiritual awakening and wholeness."
-  },
-  "black": {
-    "short": "Mystery, protection, and grounding.",
-    "long": "Black absorbs all light and symbolizes the void. It represents protection, rest, and the hidden mysteries of creation."
-  },
-  "grey": {
-    "short": "Neutrality and balance.",
-    "long": "Grey represents detachment and calm neutrality. It can signify both indecision and inner peace."
-  }
-
   "blue": {
     "hex": "#1E90FF",
     "wavelength_nm": "450–495",
@@ -104,4 +55,3 @@
     "alchemy": "Represents the Philosopher’s Stone — the union of opposites."
   }
 }
-
