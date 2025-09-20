@@ -47,9 +47,7 @@
     "short": "Neutrality and balance.",
     "long": "Grey represents detachment and calm neutrality. It can signify both indecision and inner peace."
   }
-}
 
-{
   "blue": {
     "hex": "#1E90FF",
     "wavelength_nm": "450–495",
@@ -106,3 +104,4 @@
     "alchemy": "Represents the Philosopher’s Stone — the union of opposites."
   }
 }
+
