@@ -240,11 +240,25 @@ for i, (rgb, pct, score, h, s, v, bucket) in enumerate(dominants, start=1):
 # ----------------- SHOW ACCENTS -----------------
 if accents:
     st.header("✨ Accent colors")
-    for j, (rgb, pct, score, h, s, v, bucket) in enumerate(accents, start=1):
+    for (rgb, pct, score, h, s, v, bucket) in accents:
+        hexc = rgb_to_hex(rgb)
         key = classify_by_hue(rgb)
-        render_color_block(f"{j}. Accent", rgb, pct, bucket, key)
+        meaning = safe_get_meaning(key)
+        short = meaning.get("short", "")
+        long = meaning.get("long", "No extended meaning available.")
+        chakra = meaning.get("chakra", "")
+
+        st.markdown(f"#### {bucket.capitalize()} — {key.capitalize()} — `{hexc}` ({pct*100:.1f}%)")
+        st.markdown(f"<div class='color-box' style='background:{hexc}'></div>", unsafe_allow_html=True)
+        if chakra:
+            st.markdown(f"**Chakra:** {chakra}")
+        st.markdown(f"**Quick:** {short}")
+        with st.expander("🔮 More about this color"):
+            st.write(long)
+
 
 # ----------------- SUMMARY -----------------
 if summary_shorts:
     st.header("🌀 Combined summary")
     st.markdown("**Quick combined:** " + make_summary_text(summary_shorts))
+
