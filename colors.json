@@ -1,15 +1,4 @@
 {
-  "blue": {
-    "hex": "#1E90FF",
-    "wavelength_nm": "450–495",
-    "frequency_thz": "620–670",
-    "chakra": "Throat (Vishuddha)",
-    "element": "Water / Ether",
-    "quick": "Communication, truth, serenity.",
-    "extended": "Blue soothes the mind and helps expression of inner truth. It resonates with water and the sky, giving clarity and flow. In healing, blue is used to reduce inflammation and induce calmness.",
-    "mythology": "Linked to sky gods in Egypt and Mesopotamia; seen as a divine protective color.",
-    "alchemy": "Represents the balance between Mercury and Salt, clarity of mind."
-  },
   "red": {
     "hex": "#FF0000",
     "wavelength_nm": "620–750",
@@ -21,16 +10,16 @@
     "mythology": "Associated with Mars, war, and vitality in Roman and Hindu traditions.",
     "alchemy": "Symbol of Sulphur — the fiery, active principle in matter."
   },
-  "green": {
-    "hex": "#32CD32",
-    "wavelength_nm": "495–570",
-    "frequency_thz": "526–606",
-    "chakra": "Heart (Anahata)",
-    "element": "Air / Earth",
-    "quick": "Balance, growth, compassion.",
-    "extended": "Green harmonizes body and spirit, fostering love and renewal. It represents nature, fertility, and healing. In energy work, green balances the emotions and expands empathy.",
-    "mythology": "Sacred color of Venus, symbolizing fertility and abundance in many cultures.",
-    "alchemy": "Represents the union of Sulphur and Mercury, life and growth."
+  "orange": {
+    "hex": "#FFA500",
+    "wavelength_nm": "590–620",
+    "frequency_thz": "484–508",
+    "chakra": "Sacral (Svadhisthana)",
+    "element": "Water / Fire",
+    "quick": "Creativity, sexuality, vitality.",
+    "extended": "Orange blends passion and joy, stimulating creativity and life energy. It supports intimacy, emotional expression, and enthusiasm.",
+    "mythology": "Linked to fertility rites and the warmth of the Sun.",
+    "alchemy": "Represents the fusion of energy and emotion in transformation."
   },
   "yellow": {
     "hex": "#FFD700",
@@ -39,9 +28,53 @@
     "chakra": "Solar Plexus (Manipura)",
     "element": "Fire",
     "quick": "Joy, intellect, energy.",
-    "extended": "Yellow stimulates the intellect, optimism, and personal power. It resonates with the solar plexus, bringing clarity and confidence.",
-    "mythology": "Associated with the Sun across cultures: Ra in Egypt, Apollo in Greece.",
+    "extended": "Yellow stimulates intellect, optimism, and personal power. It resonates with the solar plexus, bringing clarity, confidence, and positivity.",
+    "mythology": "Associated with the Sun: Ra in Egypt, Apollo in Greece.",
     "alchemy": "Represents Sulphur’s illuminating aspect — transformation through fire."
+  },
+  "green": {
+    "hex": "#32CD32",
+    "wavelength_nm": "495–570",
+    "frequency_thz": "526–606",
+    "chakra": "Heart (Anahata)",
+    "element": "Air / Earth",
+    "quick": "Balance, growth, compassion.",
+    "extended": "Green harmonizes body and spirit, fostering love, renewal, and healing. It represents nature, fertility, and emotional balance.",
+    "mythology": "Sacred color of Venus, symbolizing fertility and abundance.",
+    "alchemy": "Represents the union of Sulphur and Mercury — life and growth."
+  },
+  "turquoise": {
+    "hex": "#40E0D0",
+    "wavelength_nm": "490–520",
+    "frequency_thz": "576–610",
+    "chakra": "Higher Heart / Thymus",
+    "element": "Water / Ether",
+    "quick": "Healing, protection, emotional clarity.",
+    "extended": "Turquoise bridges the heart and throat chakras, aiding communication from a place of compassion. It has long been valued as a protective and healing color.",
+    "mythology": "Sacred in Native American and Tibetan traditions as a stone of the sky.",
+    "alchemy": "Represents the aqua vitae — the living waters of transformation."
+  },
+  "blue": {
+    "hex": "#1E90FF",
+    "wavelength_nm": "450–495",
+    "frequency_thz": "620–670",
+    "chakra": "Throat (Vishuddha)",
+    "element": "Water / Ether",
+    "quick": "Communication, truth, serenity.",
+    "extended": "Blue soothes the mind and helps expression of inner truth. It resonates with water and the sky, giving clarity and flow. In healing, it reduces inflammation and induces calmness.",
+    "mythology": "Linked to sky gods in Egypt and Mesopotamia.",
+    "alchemy": "Represents clarity of mind, balance of Mercury and Salt."
+  },
+  "indigo": {
+    "hex": "#4B0082",
+    "wavelength_nm": "445–464",
+    "frequency_thz": "646–675",
+    "chakra": "Third Eye (Ajna)",
+    "element": "Ether",
+    "quick": "Intuition, wisdom, inner vision.",
+    "extended": "Indigo enhances inner vision, insight, and awareness. It activates the third eye chakra, supporting spiritual awakening and deeper perception.",
+    "mythology": "Sacred to mystical traditions, linked to deep night skies.",
+    "alchemy": "Represents the inner gaze of the alchemist seeking truth."
   },
   "violet": {
     "hex": "#8A2BE2",
@@ -53,5 +86,60 @@
     "extended": "Violet connects to higher consciousness and cosmic awareness. It aids meditation, transformation, and spiritual growth.",
     "mythology": "Linked to mystical deities, royalty, and sacred rites.",
     "alchemy": "Represents the Philosopher’s Stone — the union of opposites."
+  },
+  "pink": {
+    "hex": "#FF69B4",
+    "wavelength_nm": "485–500 (perceived blend)",
+    "frequency_thz": "600–620 (perceived blend)",
+    "chakra": "Heart (Anahata, higher octave)",
+    "element": "Air / Water",
+    "quick": "Love, tenderness, compassion.",
+    "extended": "Pink softens and nurtures, opening the heart to unconditional love. It resonates with emotional healing and harmony in relationships.",
+    "mythology": "Associated with feminine deities of love and nurturing.",
+    "alchemy": "Represents the gentle fusion of Sulphur and Mercury in harmony."
+  },
+  "brown": {
+    "hex": "#8B4513",
+    "wavelength_nm": "Composite of low-sat reds/oranges",
+    "frequency_thz": "N/A",
+    "chakra": "Earth Star / grounding below Root",
+    "element": "Earth",
+    "quick": "Stability, grounding, material support.",
+    "extended": "Brown connects us to the Earth, grounding energies and stabilizing emotions. It is practical, secure, and linked to material well-being.",
+    "mythology": "Symbol of soil, fertility, and agriculture across cultures.",
+    "alchemy": "Represents the prima materia — the raw matter awaiting refinement."
+  },
+  "white": {
+    "hex": "#FFFFFF",
+    "wavelength_nm": "All visible",
+    "frequency_thz": "Composite",
+    "chakra": "Crown / All chakras",
+    "element": "Ether",
+    "quick": "Purity, unity, divine light.",
+    "extended": "White contains all colors, symbolizing unity and wholeness. It purifies, heals, and elevates spiritual awareness.",
+    "mythology": "Associated with divine beings, angels, and enlightenment.",
+    "alchemy": "Represents Albedo — the whitening stage of purification."
+  },
+  "black": {
+    "hex": "#000000",
+    "wavelength_nm": "Absence of light",
+    "frequency_thz": "N/A",
+    "chakra": "Void / potential beyond chakras",
+    "element": "Primordial void",
+    "quick": "Mystery, protection, the unknown.",
+    "extended": "Black is the fertile void, the womb of creation. It absorbs all light, representing mystery, endings, and hidden power.",
+    "mythology": "Linked to night deities and underworld journeys.",
+    "alchemy": "Represents Nigredo — the blackening, the stage of dissolution."
+  },
+  "grey": {
+    "hex": "#808080",
+    "wavelength_nm": "Neutral blend",
+    "frequency_thz": "N/A",
+    "chakra": "Between states",
+    "element": "Air / Ether (neutral)",
+    "quick": "Balance, neutrality, transition.",
+    "extended": "Grey is the color of liminality — between light and dark, yes and no. It allows for detachment, neutrality, and reflection.",
+    "mythology": "Symbol of twilight, elder wisdom, and ambiguity.",
+    "alchemy": "Represents the transitional stage — between Nigredo and Albedo."
   }
 }
