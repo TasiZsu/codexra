@@ -48,3 +48,61 @@
     "long": "Grey represents detachment and calm neutrality. It can signify both indecision and inner peace."
   }
 }
+
+{
+  "blue": {
+    "hex": "#1E90FF",
+    "wavelength_nm": "450–495",
+    "frequency_thz": "620–670",
+    "chakra": "Throat (Vishuddha)",
+    "element": "Water / Ether",
+    "quick": "Communication, truth, serenity.",
+    "extended": "Blue soothes the mind and helps expression of inner truth. It resonates with water and the sky, giving clarity and flow. In healing, blue is used to reduce inflammation and induce calmness.",
+    "mythology": "Linked to sky gods in Egypt and Mesopotamia; seen as a divine protective color.",
+    "alchemy": "Represents the balance between Mercury and Salt, clarity of mind."
+  },
+  "red": {
+    "hex": "#FF0000",
+    "wavelength_nm": "620–750",
+    "frequency_thz": "400–484",
+    "chakra": "Root (Muladhara)",
+    "element": "Fire / Earth",
+    "quick": "Energy, survival, passion.",
+    "extended": "Red is primal energy, fueling vitality and instinct. It grounds the spirit into the body and activates survival instincts. In healing, it stimulates circulation and life force.",
+    "mythology": "Associated with Mars, war, and vitality in Roman and Hindu traditions.",
+    "alchemy": "Symbol of Sulphur — the fiery, active principle in matter."
+  },
+  "green": {
+    "hex": "#32CD32",
+    "wavelength_nm": "495–570",
+    "frequency_thz": "526–606",
+    "chakra": "Heart (Anahata)",
+    "element": "Air / Earth",
+    "quick": "Balance, growth, compassion.",
+    "extended": "Green harmonizes body and spirit, fostering love and renewal. It represents nature, fertility, and healing. In energy work, green balances the emotions and expands empathy.",
+    "mythology": "Sacred color of Venus, symbolizing fertility and abundance in many cultures.",
+    "alchemy": "Represents the union of Sulphur and Mercury, life and growth."
+  },
+  "yellow": {
+    "hex": "#FFD700",
+    "wavelength_nm": "570–590",
+    "frequency_thz": "508–526",
+    "chakra": "Solar Plexus (Manipura)",
+    "element": "Fire",
+    "quick": "Joy, intellect, energy.",
+    "extended": "Yellow stimulates the intellect, optimism, and personal power. It resonates with the solar plexus, bringing clarity and confidence.",
+    "mythology": "Associated with the Sun across cultures: Ra in Egypt, Apollo in Greece.",
+    "alchemy": "Represents Sulphur’s illuminating aspect — transformation through fire."
+  },
+  "violet": {
+    "hex": "#8A2BE2",
+    "wavelength_nm": "380–450",
+    "frequency_thz": "668–789",
+    "chakra": "Crown (Sahasrara)",
+    "element": "Ether",
+    "quick": "Spirituality, transformation, transcendence.",
+    "extended": "Violet connects to higher consciousness and cosmic awareness. It aids meditation, transformation, and spiritual growth.",
+    "mythology": "Linked to mystical deities, royalty, and sacred rites.",
+    "alchemy": "Represents the Philosopher’s Stone — the union of opposites."
+  }
+}
