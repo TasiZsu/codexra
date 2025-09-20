@@ -181,30 +181,43 @@ def render_color_block(title, rgb, pct, bucket, key):
     hexc = rgb_to_hex(rgb)
     meaning = safe_get_meaning(key)
 
-    short = meaning.get("short", "No short meaning.")
-    long = meaning.get("long", "No extended meaning available.")
-    chakra = meaning.get("chakra", "")
-    frequency = meaning.get("frequency", "")
-    mythology = meaning.get("mythology", "")
-    alchemy = meaning.get("alchemy", "")
-
     st.markdown(f"### {title} — {bucket.capitalize()} / {key.capitalize()} — `{hexc}` ({pct*100:.1f}%)")
     st.markdown(f"<div class='color-box' style='background:{hexc}'></div>", unsafe_allow_html=True)
 
+    # Standard mezők
+    chakra = meaning.get("chakra", "")
+    element = meaning.get("element", "")
+    wavelength = meaning.get("wavelength_nm", "")
+    frequency = meaning.get("frequency_thz", "")
+
     if chakra:
         st.markdown(f"**Chakra:** {chakra}")
+    if element:
+        st.markdown(f"**Element:** {element}")
+    if wavelength:
+        st.markdown(f"**Wavelength (nm):** {wavelength}")
     if frequency:
-        st.markdown(f"**Frequency:** {frequency}")
+        st.markdown(f"**Frequency (THz):** {frequency}")
+
+    # Rövid + bővített leírás
+    quick = meaning.get("quick", "")
+    extended = meaning.get("extended", "")
+    if quick:
+        st.markdown(f"**Quick:** {quick}")
+    if extended:
+        with st.expander("🔮 More about this color"):
+            st.write(extended)
+
+    # Extra opcionális mezők
+    mythology = meaning.get("mythology", "")
+    alchemy = meaning.get("alchemy", "")
     if mythology:
         st.markdown(f"**Mythology:** {mythology}")
     if alchemy:
         st.markdown(f"**Alchemy:** {alchemy}")
 
-    st.markdown(f"**Quick:** {short}")
-    with st.expander("🔮 More about this color"):
-        st.write(long)
+    return quick
 
-    return short
 
 # ----------------- UI -----------------
 st.title("🌈 CodexRa — Decode the Light Within")
@@ -261,4 +274,5 @@ if accents:
 if summary_shorts:
     st.header("🌀 Combined summary")
     st.markdown("**Quick combined:** " + make_summary_text(summary_shorts))
+
 
