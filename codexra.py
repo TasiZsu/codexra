@@ -243,11 +243,17 @@ palette = get_palette_pillow(image, colors=24)
 dominants, accents = choose_dominant_and_accents(palette)
 
 # ----------------- SHOW DOMINANTS -----------------
-# Display dominants
+# Dominant colors
 st.header("🎨 Dominant colors (3) — separate blocks")
 summary_shorts = []
 
-for i, (rgb, pct, key, total_pct) in enumerate(dominants, start=1):
+for i, item in enumerate(dominants, start=1):
+    # item lehet 2, 3 vagy 4 elemű
+    rgb = item[0]
+    pct = item[1]
+    key = item[2] if len(item) > 2 else classify_by_hue(rgb)
+    total_pct = item[3] if len(item) > 3 else pct
+
     hexc = rgb_to_hex(rgb)
     meaning = safe_get_meaning(key)
     short = meaning.get("quick", "No quick meaning.")
@@ -278,11 +284,17 @@ for i, (rgb, pct, key, total_pct) in enumerate(dominants, start=1):
     summary_shorts.append(short)
 
 
+
 # ----------------- SHOW ACCENTS -----------------
-# Display accent colors
+# Accent colors
 if accents:
     st.header("✨ Accent colors (2) — contrast highlights")
-    for (rgb, pct, key, total_pct) in accents:
+    for item in accents:
+        rgb = item[0]
+        pct = item[1]
+        key = item[2] if len(item) > 2 else classify_by_hue(rgb)
+        total_pct = item[3] if len(item) > 3 else pct
+
         hexc = rgb_to_hex(rgb)
         meaning = safe_get_meaning(key)
         short = meaning.get("quick", "")
@@ -313,6 +325,7 @@ if accents:
 if summary_shorts:
     st.header("🌀 Combined summary")
     st.markdown("**Quick combined:** " + make_summary_text(summary_shorts))
+
 
 
 
