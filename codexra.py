@@ -243,36 +243,76 @@ palette = get_palette_pillow(image, colors=24)
 dominants, accents = choose_dominant_and_accents(palette)
 
 # ----------------- SHOW DOMINANTS -----------------
-st.header("🎨 Dominant colors")
+# Display dominants
+st.header("🎨 Dominant colors (3) — separate blocks")
 summary_shorts = []
-for i, (rgb, pct, score, h, s, v, bucket) in enumerate(dominants, start=1):
-    key = classify_by_hue(rgb)
-    short = render_color_block(f"{i}. Dominant", rgb, pct, bucket, key)
-    summary_shorts.append(short)
 
-# ----------------- SHOW ACCENTS -----------------
-if accents:
-    st.header("✨ Accent colors")
-    for (rgb, pct, score, h, s, v, bucket) in accents:
-        hexc = rgb_to_hex(rgb)
-        key = classify_by_hue(rgb)
-        meaning = safe_get_meaning(key)
-        short = meaning.get("short", "")
-        long = meaning.get("long", "No extended meaning available.")
-        chakra = meaning.get("chakra", "")
+for i, (rgb, pct, key, total_pct) in enumerate(dominants, start=1):
+    hexc = rgb_to_hex(rgb)
+    meaning = safe_get_meaning(key)
+    short = meaning.get("quick", "No quick meaning.")
+    long = meaning.get("extended", "No extended meaning available.")
+    chakra = meaning.get("chakra", "")
+    element = meaning.get("element", "")
+    wavelength = meaning.get("wavelength_nm", "")
+    frequency = meaning.get("frequency_thz", "")
 
-        st.markdown(f"#### {bucket.capitalize()} — {key.capitalize()} — `{hexc}` ({pct*100:.1f}%)")
-        st.markdown(f"<div class='color-box' style='background:{hexc}'></div>", unsafe_allow_html=True)
+    st.markdown(f"### {i}. {key.capitalize()} — `{hexc}`  ({total_pct*100:.1f}% of image)")
+    cols = st.columns([1,3])
+    with cols[0]:
+        st.markdown(
+            f"<div style='width:100%;height:80px;border-radius:8px;background:{hexc};border:1px solid rgba(255,255,255,0.08)'></div>",
+            unsafe_allow_html=True
+        )
+    with cols[1]:
         if chakra:
             st.markdown(f"**Chakra:** {chakra}")
+        if element:
+            st.markdown(f"**Element:** {element}")
+        if wavelength and frequency:
+            st.markdown(f"**Wave:** {wavelength} nm • {frequency} THz")
         st.markdown(f"**Quick:** {short}")
         with st.expander("🔮 More about this color"):
             st.write(long)
+
+    summary_shorts.append(short)
+
+
+# ----------------- SHOW ACCENTS -----------------
+# Display accent colors
+if accents:
+    st.header("✨ Accent colors (2) — contrast highlights")
+    for (rgb, pct, key, total_pct) in accents:
+        hexc = rgb_to_hex(rgb)
+        meaning = safe_get_meaning(key)
+        short = meaning.get("quick", "")
+        long = meaning.get("extended", "")
+        chakra = meaning.get("chakra", "")
+        element = meaning.get("element", "")
+
+        cols = st.columns([1,3])
+        with cols[0]:
+            st.markdown(
+                f"<div style='width:100%;height:60px;border-radius:8px;background:{hexc};border:1px solid rgba(255,255,255,0.08)'></div>",
+                unsafe_allow_html=True
+            )
+        with cols[1]:
+            st.markdown(f"**{key.capitalize()}** — `{hexc}` ({total_pct*100:.1f}% of image)")
+            if chakra:
+                st.markdown(f"**Chakra:** {chakra}")
+            if element:
+                st.markdown(f"**Element:** {element}")
+            if short:
+                st.markdown(f"**Quick:** {short}")
+            if long:
+                with st.expander("🔮 More about this color"):
+                    st.write(long)
 
 
 # ----------------- SUMMARY -----------------
 if summary_shorts:
     st.header("🌀 Combined summary")
     st.markdown("**Quick combined:** " + make_summary_text(summary_shorts))
+
 
 
