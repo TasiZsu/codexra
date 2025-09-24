@@ -9,7 +9,22 @@ import io
 # ----------------- CONFIG -----------------
 st.set_page_config(page_title="CodexRa - Decode the Light Within", layout="centered", page_icon="🌈")
 
-# Path to your colors.json in the repo
+# 🌌 Custom background image (CSS injection)
+page_bg = """
+<style>
+[data-testid="stAppViewContainer"] {
+    background-image: url("https://images.unsplash.com/photo-1507525428034-b723cf961d3e");
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+[data-testid="stHeader"] {background: rgba(0,0,0,0);}
+[data-testid="stToolbar"] {visibility: hidden;}
+</style>
+"""
+st.markdown(page_bg, unsafe_allow_html=True)
+
+# Path to your colors.json
 COLORS_JSON = "colors.json"
 
 # ----------------- HELPERS -----------------
@@ -136,7 +151,7 @@ def make_summary_text(shorts):
 
 # ----------------- UI -----------------
 st.title("🌈 CodexRa — Decode the Light Within")
-st.write("Upload an image and CodexRa will extract the 3 dominant colors and 2 accent colors, classify them into main/intermediate hues, and show interpretations.")
+st.write("Upload an image and CodexRa will extract dominant + accent colors, classify them into hue groups, and show symbolic, chakra, alchemical, and mythological meanings.")
 
 uploaded_file = st.file_uploader("Upload image (jpg/png)", type=["jpg","jpeg","png"])
 
@@ -160,11 +175,7 @@ st.header("🎨 Dominant colors")
 summary_shorts = []
 
 for i, item in enumerate(dominants, start=1):
-    rgb = item[0]
-    pct = item[1]
-    key = item[2] if len(item) > 2 else classify_by_hue(rgb)
-    total_pct = item[3] if len(item) > 3 else pct
-
+    rgb, pct, key, total_pct = item
     hexc = rgb_to_hex(rgb)
     meaning = safe_get_meaning(key)
     short = meaning.get("quick", "No quick meaning.")
@@ -173,6 +184,8 @@ for i, item in enumerate(dominants, start=1):
     element = meaning.get("element", "")
     wavelength = meaning.get("wavelength_nm", "")
     frequency = meaning.get("frequency_thz", "")
+    mythology = meaning.get("mythology", "")
+    alchemy = meaning.get("alchemy", "")
 
     st.markdown(f"### {i}. {key.capitalize()} — `{hexc}`  ({total_pct*100:.1f}% of image)")
     cols = st.columns([1,3])
@@ -182,15 +195,17 @@ for i, item in enumerate(dominants, start=1):
             unsafe_allow_html=True
         )
     with cols[1]:
-        if chakra:
-            st.markdown(f"**Chakra:** {chakra}")
-        if element:
-            st.markdown(f"**Element:** {element}")
+        if chakra: st.markdown(f"**Chakra:** {chakra}")
+        if element: st.markdown(f"**Element:** {element}")
         if wavelength and frequency:
             st.markdown(f"**Wave:** {wavelength} nm • {frequency} THz")
         st.markdown(f"**Quick:** {short}")
-        with st.expander("🔮 More about this color"):
+        with st.expander("🔮 Extended meaning"):
             st.write(long)
+        if mythology or alchemy:
+            with st.expander("📜 Mythology & Alchemy"):
+                if mythology: st.write(f"**Mythology:** {mythology}")
+                if alchemy: st.write(f"**Alchemy:** {alchemy}")
 
     summary_shorts.append(short)
 
@@ -198,17 +213,15 @@ for i, item in enumerate(dominants, start=1):
 if accents:
     st.header("✨ Accent colors")
     for item in accents:
-        rgb = item[0]
-        pct = item[1]
-        key = item[2] if len(item) > 2 else classify_by_hue(rgb)
-        total_pct = item[3] if len(item) > 3 else pct
-
+        rgb, pct, key, total_pct = item
         hexc = rgb_to_hex(rgb)
         meaning = safe_get_meaning(key)
         short = meaning.get("quick", "")
         long = meaning.get("extended", "")
         chakra = meaning.get("chakra", "")
         element = meaning.get("element", "")
+        mythology = meaning.get("mythology", "")
+        alchemy = meaning.get("alchemy", "")
 
         cols = st.columns([1,3])
         with cols[0]:
@@ -218,15 +231,16 @@ if accents:
             )
         with cols[1]:
             st.markdown(f"**{key.capitalize()}** — `{hexc}` ({total_pct*100:.1f}% of image)")
-            if chakra:
-                st.markdown(f"**Chakra:** {chakra}")
-            if element:
-                st.markdown(f"**Element:** {element}")
-            if short:
-                st.markdown(f"**Quick:** {short}")
+            if chakra: st.markdown(f"**Chakra:** {chakra}")
+            if element: st.markdown(f"**Element:** {element}")
+            if short: st.markdown(f"**Quick:** {short}")
             if long:
-                with st.expander("🔮 More about this color"):
+                with st.expander("🔮 Extended meaning"):
                     st.write(long)
+            if mythology or alchemy:
+                with st.expander("📜 Mythology & Alchemy"):
+                    if mythology: st.write(f"**Mythology:** {mythology}")
+                    if alchemy: st.write(f"**Alchemy:** {alchemy}")
 
 # Combined summary
 st.header("🌀 Combined summary")
