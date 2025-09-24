@@ -7,30 +7,9 @@ import json
 import io
 
 # ----------------- CONFIG -----------------
-st.set_page_config(page_title="CodexRa - Decode the Light Within",
-                   layout="centered", page_icon="🌈")
+st.set_page_config(page_title="CodexRa - Decode the Light Within", layout="centered", page_icon="🌈")
 
-# Custom CSS for centered, max-width layout
-st.markdown(
-    """
-    <style>
-    .main {
-        max-width: 900px;
-        margin: auto;
-        padding-top: 2rem;
-    }
-    .color-box {
-        width: 60px;
-        height: 60px;
-        border-radius: 8px;
-        border: 1px solid rgba(255,255,255,0.2);
-        margin-bottom: 6px;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
+# Path to your colors.json in the repo
 COLORS_JSON = "colors.json"
 
 # ----------------- HELPERS -----------------
@@ -52,7 +31,9 @@ def rgb_to_hsv_deg(r, g, b):
     return h * 360.0, s, v
 
 def classify_by_hue(rgb):
-    h, s, v = rgb_to_hsv_deg(*rgb)
+    r, g, b = rgb
+    h, s, v = rgb_to_hsv_deg(r, g, b)
+
     if v <= 0.06:
         return "black"
     if s <= 0.12 and v >= 0.92:
@@ -63,8 +44,11 @@ def classify_by_hue(rgb):
         return "brown"
     if h >= 150 and h < 185 and s > 0.18:
         return "turquoise"
-    if (h >= 320 and h < 345) or (h >= 275 and h < 320):
-        return "violet"
+    if (h >= 320 and h < 345) or (h >= 275 and h < 320 and r > 120 and b > 120):
+        if h >= 320 and s > 0.25:
+            return "magenta"
+        if 275 <= h < 320:
+            return "violet"
     if h < 15 or h >= 345:
         return "red"
     if 15 <= h < 45:
@@ -73,15 +57,17 @@ def classify_by_hue(rgb):
         return "yellow"
     if 65 <= h < 150:
         return "green"
-    if 185 <= h < 250:
+    if 180 <= h < 240:
         return "blue"
-    if 250 <= h < 275:
+    if 240 <= h < 275:
         return "indigo"
-    if 320 <= h < 340:
+    if 275 <= h < 320:
+        return "violet"
+    if 320 <= h < 345:
         return "pink"
-    return "neutral"
+    return "white"
 
-def get_palette_pillow(image: Image.Image, colors=24):
+def get_palette_pillow(image: Image.Image, colors=8):
     img = image.convert("RGB")
     w, h = img.size
     max_dim = 400
@@ -93,10 +79,14 @@ def get_palette_pillow(image: Image.Image, colors=24):
     palette = pal.getpalette()
     color_counts = pal.getcolors()
     if not color_counts:
-        arr = np.array(img).reshape(-1,3)
+        arr = np.array(img).reshape(-1, 3)
         vals, counts = np.unique(arr, axis=0, return_counts=True)
         total = counts.sum()
-        return [(tuple(vals[i].tolist()), counts[i]/total) for i in np.argsort(-counts)[:colors]]
+        items = []
+        idxs = np.argsort(-counts)[:colors]
+        for i in idxs:
+            items.append((tuple(vals[i].tolist()), counts[i]/total))
+        return items
 
     total = sum(c[0] for c in color_counts)
     color_counts.sort(reverse=True, key=lambda x: x[0])
@@ -106,149 +96,70 @@ def get_palette_pillow(image: Image.Image, colors=24):
         g = palette[idx*3 + 1]
         b = palette[idx*3 + 2]
         pct = count / total
-        results.append(((r,g,b), pct))
+        results.append(((r, g, b), pct))
     return results
 
-# ---------- COLOR SCORING & BUCKETS ----------
-def color_distance(rgb1, rgb2):
-    return np.linalg.norm(np.array(rgb1) - np.array(rgb2))
-
-def score_color(rgb, pct, palette):
-    h, s, v = rgb_to_hsv_deg(*rgb)
-    if s < 0.25 or v < 0.2 or v > 0.95:
-        return pct * 0.05
-    if len(palette) > 1:
-        distances = [color_distance(rgb, other) for (other, _) in palette if not np.array_equal(rgb, other)]
-        uniqueness = np.mean(distances) / 255.0
-    else:
-        uniqueness = 1.0
-    return (pct**0.6) * (0.4 + 0.6*s) * (0.5 + 0.5*v) * (0.8 + 0.2*uniqueness)
-
-def bucket_hue(h):
-    if h < 20 or h >= 340:
-        return "red"
-    if 20 <= h < 45:
-        return "orange"
-    if 45 <= h < 65:
-        return "yellow"
-    if 65 <= h < 150:
-        return "green"
-    if 150 <= h < 185:
-        return "cyan"
-    if 185 <= h < 250:
-        return "blue"
-    if 250 <= h < 275:
-        return "indigo"
-    if 275 <= h < 320:
-        return "violet"
-    if 320 <= h < 340:
-        return "pink"
-    return "neutral"
-
 def choose_dominant_and_accents(palette, n_dom=3, n_accents=2):
-    scored = []
-    for rgb, pct in palette:
+    groups = {}
+    for (rgb, pct) in palette:
+        key = classify_by_hue(rgb)
+        if key not in groups:
+            groups[key] = {"total_pct": 0, "candidates": []}
+        groups[key]["total_pct"] += pct
+        groups[key]["candidates"].append((rgb, pct))
+
+    group_reps = []
+    for key, data in groups.items():
+        rgb, pct = max(data["candidates"], key=lambda x: x[1])
+        group_reps.append((rgb, pct, key, data["total_pct"]))
+
+    group_reps.sort(key=lambda x: -x[3])
+    dominants = group_reps[:n_dom]
+
+    rest = group_reps[n_dom:]
+    accents = []
+    for (rgb, pct, key, total_pct) in rest:
         h, s, v = rgb_to_hsv_deg(*rgb)
-        sc = score_color(rgb, pct, palette)
-        scored.append((rgb, pct, sc, h, s, v, bucket_hue(h)))
-
-    buckets = {}
-    for item in scored:
-        bucket = item[6]
-        if bucket not in buckets:
-            buckets[bucket] = []
-        buckets[bucket].append(item)
-
-    best_per_bucket = []
-    for bucket, items in buckets.items():
-        best = max(items, key=lambda x: x[2])
-        best_per_bucket.append(best)
-
-    dominants = sorted(best_per_bucket, key=lambda x: x[2], reverse=True)[:n_dom]
-    rest = [x for x in best_per_bucket if x not in dominants]
-    accents = sorted(rest, key=lambda x: (x[4], x[5]), reverse=True)[:n_accents]
+        if s > 0.25 and v > 0.25:
+            accents.append((rgb, pct, key, total_pct))
+    accents = sorted(accents, key=lambda x: -x[1])[:n_accents]
 
     return dominants, accents
-# -----------------------------------
 
 def safe_get_meaning(key):
+    if not isinstance(key, str):
+        key = str(key)
     return color_db.get(key.lower(), {})
 
 def make_summary_text(shorts):
     return " • ".join(shorts)
 
-def render_color_block(title, rgb, pct, bucket, key):
-    hexc = rgb_to_hex(rgb)
-    meaning = safe_get_meaning(key)
-
-    st.markdown(f"### {title} — {bucket.capitalize()} / {key.capitalize()} — `{hexc}` ({pct*100:.1f}%)")
-    st.markdown(f"<div class='color-box' style='background:{hexc}'></div>", unsafe_allow_html=True)
-
-    # Standard mezők
-    chakra = meaning.get("chakra", "")
-    element = meaning.get("element", "")
-    wavelength = meaning.get("wavelength_nm", "")
-    frequency = meaning.get("frequency_thz", "")
-
-    if chakra:
-        st.markdown(f"**Chakra:** {chakra}")
-    if element:
-        st.markdown(f"**Element:** {element}")
-    if wavelength:
-        st.markdown(f"**Wavelength (nm):** {wavelength}")
-    if frequency:
-        st.markdown(f"**Frequency (THz):** {frequency}")
-
-    # Rövid + bővített leírás
-    quick = meaning.get("quick", "")
-    extended = meaning.get("extended", "")
-    if quick:
-        st.markdown(f"**Quick:** {quick}")
-    if extended:
-        with st.expander("🔮 More about this color"):
-            st.write(extended)
-
-    # Extra opcionális mezők
-    mythology = meaning.get("mythology", "")
-    alchemy = meaning.get("alchemy", "")
-    if mythology:
-        st.markdown(f"**Mythology:** {mythology}")
-    if alchemy:
-        st.markdown(f"**Alchemy:** {alchemy}")
-
-    return quick
-
-
 # ----------------- UI -----------------
 st.title("🌈 CodexRa — Decode the Light Within")
-st.write("Upload an image and CodexRa will extract diverse dominant and accent colors, then show chakra, symbolic, frequency, mythology, alchemy info (if available).")
+st.write("Upload an image and CodexRa will extract the 3 dominant colors and 2 accent colors, classify them into main/intermediate hues, and show interpretations.")
 
 uploaded_file = st.file_uploader("Upload image (jpg/png)", type=["jpg","jpeg","png"])
-if not uploaded_file:
+
+if uploaded_file:
+    try:
+        image = Image.open(uploaded_file).convert("RGB")
+    except Exception as e:
+        st.error("Could not open image. Try another file.")
+        st.stop()
+else:
     st.info("Upload an image to start analysis.")
     st.stop()
 
-try:
-    image = Image.open(uploaded_file).convert("RGB")
-except Exception:
-    st.error("Could not open image. Try another file.")
-    st.stop()
+st.image(image, caption="Analyzed image", width=900)
 
-st.image(image, caption="Analyzed image", use_container_width=True)
+palette = get_palette_pillow(image, colors=10)
+dominants, accents = choose_dominant_and_accents(palette, n_dom=3, n_accents=2)
 
-# extract palette
-palette = get_palette_pillow(image, colors=24)
-
-# choose dominants & accents
-dominants, accents = choose_dominant_and_accents(palette)
-
-# ----------------- SHOW DOMINANTS -----------------
 # Dominant colors
-st.header("🎨 Dominant colors (3) — separate blocks")
+st.header("🎨 Dominant colors")
 summary_shorts = []
 
 for i, item in enumerate(dominants, start=1):
-    # item lehet 2, 3 vagy 4 elemű
     rgb = item[0]
     pct = item[1]
     key = item[2] if len(item) > 2 else classify_by_hue(rgb)
@@ -283,12 +194,9 @@ for i, item in enumerate(dominants, start=1):
 
     summary_shorts.append(short)
 
-
-
-# ----------------- SHOW ACCENTS -----------------
 # Accent colors
 if accents:
-    st.header("✨ Accent colors (2) — contrast highlights")
+    st.header("✨ Accent colors")
     for item in accents:
         rgb = item[0]
         pct = item[1]
@@ -320,12 +228,9 @@ if accents:
                 with st.expander("🔮 More about this color"):
                     st.write(long)
 
-
-# ----------------- SUMMARY -----------------
+# Combined summary
+st.header("🌀 Combined summary")
 if summary_shorts:
-    st.header("🌀 Combined summary")
     st.markdown("**Quick combined:** " + make_summary_text(summary_shorts))
-
-
-
-
+else:
+    st.info("No colors found to summarize.")
