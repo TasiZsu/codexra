@@ -115,6 +115,13 @@ def get_palette_pillow(image: Image.Image, colors=8):
     return results
 
 def choose_dominant_and_accents(palette, n_dom=3, n_accents=2):
+    """
+    Palette mode:
+    - 3 dominant colors: from the top 3 most represented hue groups.
+    - 2 accents: from smaller groups with high saturation/brightness.
+    """
+
+    # 1. Csoportosítás
     groups = {}
     for (rgb, pct) in palette:
         key = classify_by_hue(rgb)
@@ -123,23 +130,30 @@ def choose_dominant_and_accents(palette, n_dom=3, n_accents=2):
         groups[key]["total_pct"] += pct
         groups[key]["candidates"].append((rgb, pct))
 
+    # 2. Legjellemzőbb szín minden csoportból
     group_reps = []
     for key, data in groups.items():
-        rgb, pct = max(data["candidates"], key=lambda x: x[1])
+        rgb, pct = max(data["candidates"], key=lambda x: x[1])  # legdominánsabb árnyalat a csoportban
         group_reps.append((rgb, pct, key, data["total_pct"]))
 
+    # 3. Rendezés: csoport összes arány szerint
     group_reps.sort(key=lambda x: -x[3])
+
+    # 4. Domináns = top 3 külön csoport
     dominants = group_reps[:n_dom]
 
+    # 5. Accents = maradék, de élénk színek
     rest = group_reps[n_dom:]
-    accents = []
+    scored = []
     for (rgb, pct, key, total_pct) in rest:
         h, s, v = rgb_to_hsv_deg(*rgb)
-        if s > 0.25 and v > 0.25:
-            accents.append((rgb, pct, key, total_pct))
-    accents = sorted(accents, key=lambda x: -x[1])[:n_accents]
+        score = s * 0.7 + v * 0.3  # élénkség súlyozva
+        scored.append((rgb, pct, key, total_pct, score))
+    scored.sort(key=lambda x: -x[4])
+    accents = [(rgb, pct, key, total_pct) for (rgb, pct, key, total_pct, _) in scored[:n_accents]]
 
     return dominants, accents
+
 
 def safe_get_meaning(key):
     if not isinstance(key, str):
@@ -248,3 +262,4 @@ if summary_shorts:
     st.markdown("**Quick combined:** " + make_summary_text(summary_shorts))
 else:
     st.info("No colors found to summarize.")
+
